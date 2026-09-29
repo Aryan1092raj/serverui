@@ -4,10 +4,13 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { ChevronLeft, ChevronRight, Home, Search } from "lucide-react";
 import { ApiError } from "@/src/lib/api/client";
 import {
+  baseName,
+  buildMoveDestination,
   createDirectory,
   createFile,
   deleteFile,
   downloadUrl,
+  isValidMove,
   joinPath,
   listFiles,
   parentPath,
@@ -199,6 +202,33 @@ export function FilesApp() {
       await load(path);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "upload failed");
+    }
+  }
+
+  async function handleMove(sourcePath: string, destDir: string) {
+    const source = entries.find((entry) => entry.path === sourcePath);
+    if (!source) {
+      setError("unable to move: item not found");
+      return;
+    }
+    if (!isValidMove(sourcePath, source.type, destDir)) {
+      setError("cannot move a folder into itself or one of its descendants");
+      return;
+    }
+    const to = buildMoveDestination(destDir, sourcePath);
+    if (sourcePath === to) return;
+    try {
+      setError(null);
+      const destEntries = destDir === path ? entries : (await listFiles(serverId, destDir)).entries;
+      if (destEntries.some((entry) => entry.name === source.name && entry.path !== sourcePath)) {
+        setError(`An item named ${source.name} already exists.`);
+        return;
+      }
+      await renameFile(serverId, sourcePath, to);
+      setSelected(null);
+      await load(path);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : `unable to move ${baseName(sourcePath)}`);
     }
   }
 
@@ -433,6 +463,7 @@ export function FilesApp() {
             onOpen={openEntry}
             onParent={() => path !== "/" && goTo(parentPath(path))}
             onContextMenu={openContextMenu}
+            onMove={(source, dest) => void handleMove(source, dest)}
           />
         )}
         <div className="flex shrink-0 items-center justify-between border-t sui-hairline px-4 py-1.5 text-[11px] sui-muted">
