@@ -126,6 +126,7 @@ export function FilesApp() {
     setQuery("");
     setPath(normalized);
     setMenu(null);
+    setPendingMove(null);
     void load(normalized);
   }
 
@@ -222,7 +223,7 @@ export function FilesApp() {
       return;
     }
     if (!isValidMove(sourcePath, source.type, destDir)) {
-      setError("cannot move a folder into itself or one of its descendants");
+      setError("cannot move an item into itself or its current location");
       return;
     }
     const to = buildMoveDestination(destDir, sourcePath);
