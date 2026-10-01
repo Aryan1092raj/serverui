@@ -253,7 +253,13 @@ export function FilesApp() {
     if (!pendingMove) return;
     try {
       setError(null);
-      const to = mode === "replace" ? pendingMove.to : joinPath(pendingMove.destDir, suggestUniqueName(pendingMove.destNames, pendingMove.name));
+      const to =
+        mode === "replace"
+          ? pendingMove.to
+          : joinPath(
+              pendingMove.destDir,
+              suggestUniqueName(pendingMove.destNames, pendingMove.name),
+            );
       await renameFile(serverId, pendingMove.from, to);
       setPendingMove(null);
       setSelected(null);
@@ -484,15 +490,24 @@ export function FilesApp() {
             aria-labelledby="move-conflict-title"
           >
             <p id="move-conflict-title" className="min-w-0 flex-1">
-              An item named <span className="font-medium">“{pendingMove.name}”</span> already exists.
+              An item named <span className="font-medium">“{pendingMove.name}”</span> already
+              exists.
             </p>
             <button type="button" className={toolbarClass} onClick={() => setPendingMove(null)}>
               Cancel
             </button>
-            <button type="button" className={toolbarClass} onClick={() => void resolveMove("replace")}>
+            <button
+              type="button"
+              className={toolbarClass}
+              onClick={() => void resolveMove("replace")}
+            >
               Replace
             </button>
-            <button type="button" className={toolbarClass} onClick={() => void resolveMove("rename")}>
+            <button
+              type="button"
+              className={toolbarClass}
+              onClick={() => void resolveMove("rename")}
+            >
               Rename
             </button>
           </div>

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { baseName, buildMoveDestination, isValidMove, joinPath, parentPath, suggestUniqueName } from "@/src/lib/api/files";
+import {
+  baseName,
+  buildMoveDestination,
+  isValidMove,
+  joinPath,
+  parentPath,
+  suggestUniqueName,
+} from "@/src/lib/api/files";
 
 describe("file path helpers", () => {
   it("joins names onto a directory", () => {
