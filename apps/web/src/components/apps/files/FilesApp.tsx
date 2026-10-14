@@ -36,6 +36,7 @@ import { addDesktopShortcut } from "@/src/lib/desktop-shortcuts";
 import { useServer } from "@/src/lib/api/server-context";
 import { useSelectedServer } from "@/src/lib/session";
 import { formatSize, totalSize } from "@/src/lib/files/format";
+import { getFileViewer } from "@/src/lib/files/file-type";
 import { Breadcrumbs } from "@/src/components/apps/files/Breadcrumbs";
 import { DownloadPanel, useDownloadQueue } from "@/src/components/apps/files/DownloadQueue";
 import { FileContextMenu } from "@/src/components/apps/files/FileContextMenu";
@@ -43,6 +44,11 @@ import { FileGrid } from "@/src/components/apps/files/FileGrid";
 import { FileList } from "@/src/components/apps/files/FileList";
 import { FileToolbar, toolbarClass, type FilesView } from "@/src/components/apps/files/FileToolbar";
 import { FilesSidebar } from "@/src/components/apps/files/FilesSidebar";
+
+function isEditable(entry: FileEntry) {
+  const kind = getFileViewer({ name: entry.name, mime: entry.mime });
+  return entry.type === "file" && (kind === "text" || kind === "code");
+}
 
 type Dialog =
   | { type: "file"; value: string }
@@ -1262,6 +1268,13 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
           onNewFile={newFile}
           onUpload={pickUpload}
           canPaste={Boolean(clipboard)}
+          onEdit={
+            menu.entry && isEditable(menu.entry)
+              ? () =>
+                  menu.entry &&
+                  openWindow("editor", { filePath: menu.entry.path, fileName: menu.entry.name })
+              : undefined
+          }
           onAddToDesktop={() => addDesktopShortcut(serverId, menu.entry?.path || path)}
           onCompress={() => openCompress(menuTargets(menu.entry))}
           onExtractHere={() => menu.entry && void onExtract(menu.entry, "here")}
