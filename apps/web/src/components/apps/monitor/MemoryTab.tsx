@@ -187,7 +187,7 @@ function Donut({
         cy="60"
         r={radius}
         fill="none"
-        stroke="rgba(255,255,255,0.06)"
+        stroke="var(--chart-grid)"
         strokeWidth={stroke}
       />
       {slices.map((slice, index) => {
@@ -212,7 +212,7 @@ function Donut({
       <text x="60" y="56" textAnchor="middle" fill="white" fontSize="14" fontWeight="600">
         {formatBytes(total, 0)}
       </text>
-      <text x="60" y="72" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="10">
+      <text x="60" y="72" textAnchor="middle" fill="var(--chart-label-strong)" fontSize="10">
         Total
       </text>
     </svg>
