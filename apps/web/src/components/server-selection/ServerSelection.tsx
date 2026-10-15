@@ -6,15 +6,30 @@ import { BrandMark } from "@/src/components/brand/BrandMark";
 import { AddServerModal } from "@/src/components/server-selection/AddServerModal";
 import { ServerCard } from "@/src/components/server-selection/ServerCard";
 import type { NewServerInput, Server } from "@/src/lib/servers";
+
+export type ServerWindowActions = {
+  connect: (server: Server) => void;
+  disconnect: (server: Server) => void;
+  reconnect: (server: Server) => void;
+  openFiles: (server: Server) => void;
+  openTerminal: (server: Server) => void;
+  openMetrics: (server: Server) => void;
+};
 import { ApiError } from "@/src/lib/api/client";
 import { formatConnectionTestMessage, formatFriendly, friendlyError } from "@/src/lib/errors";
 import { formatApiError, useSession } from "@/src/lib/session";
 import { WallpaperBackdrop } from "@/src/lib/wallpaper";
 
-export function ServerSelection() {
+export function ServerSelection({
+  surface = "page",
+  actions,
+}: {
+  surface?: "page" | "window";
+  actions?: ServerWindowActions;
+}) {
   const {
     servers,
-    selectServer,
+    connectServer,
     addServer,
     updateServer,
     deleteServer,
@@ -50,7 +65,8 @@ export function ServerSelection() {
       const created = await addServer(input);
       setAdding(false);
       if (options?.connect) {
-        selectServer(created);
+        if (actions) void actions.connect(created);
+        else void connectServer(created.id);
       }
     } catch (err) {
       setFormError(formatFriendly(friendlyError(err, "Unable to add server.")));
@@ -116,18 +132,32 @@ export function ServerSelection() {
 
   const empty = !loadingServers && !serversError && servers.length === 0;
 
+  const page = surface === "page";
+
   return (
-    <div className="relative h-dvh w-full overflow-auto text-white">
-      <WallpaperBackdrop
-        className="pointer-events-none absolute inset-0 bg-cover bg-center"
-        opacity={0.4}
-      />
+    <div
+      className={
+        page
+          ? "relative h-dvh w-full overflow-auto text-white"
+          : "relative h-full overflow-auto text-white"
+      }
+    >
+      {page ? (
+        <WallpaperBackdrop
+          className="pointer-events-none absolute inset-0 bg-cover bg-center"
+          opacity={0.4}
+        />
+      ) : null}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_42%),linear-gradient(to_bottom,rgba(8,10,14,0.55),rgba(8,10,14,0.88))]"
       />
 
-      <main className="relative mx-auto flex min-h-dvh w-full max-w-[920px] flex-col justify-center px-6 py-10 sm:px-10">
+      <main
+        className={`relative mx-auto flex w-full max-w-[920px] flex-col px-6 py-8 sm:px-8 ${
+          page ? "min-h-dvh justify-center" : "justify-start"
+        }`}
+      >
         <header className="max-w-xl">
           <BrandMark
             size={40}
@@ -141,7 +171,9 @@ export function ServerSelection() {
           <p className="mt-2 text-[15px] leading-6 text-white/62">
             {empty
               ? "Add your first Linux server over SSH. Manage files, a terminal, and live metrics from a desktop-style control panel."
-              : "Select a machine to open its desktop. Switch servers anytime from the top bar."}
+              : page
+                ? "Connect a machine, then open Files, Terminal, or metrics for it. Other servers stay connected."
+                : "Connect any machine. Files, Terminal, and metrics open here and stay open while you connect others."}
           </p>
         </header>
 
@@ -196,7 +228,15 @@ export function ServerSelection() {
               server={server}
               testing={testingId === server.id}
               testMessage={testMessage[server.id]}
-              onConnect={() => selectServer(server)}
+              onConnect={() => {
+                if (actions) actions.connect(server);
+                else void connectServer(server.id);
+              }}
+              onDisconnect={actions ? () => actions.disconnect(server) : undefined}
+              onReconnect={actions ? () => actions.reconnect(server) : undefined}
+              onOpenFiles={actions ? () => actions.openFiles(server) : undefined}
+              onOpenTerminal={actions ? () => actions.openTerminal(server) : undefined}
+              onOpenMetrics={actions ? () => actions.openMetrics(server) : undefined}
               onTest={() => void onTest(server.id)}
               onEdit={() => {
                 setFormError(null);

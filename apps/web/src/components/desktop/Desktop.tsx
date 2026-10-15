@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent, type PointerEvent } from "react";
-import { ServerProvider } from "@/src/lib/api/server-context";
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { isDesktopRuntime } from "@/src/lib/runtime";
 import { useSession } from "@/src/lib/session";
 import { DesktopContextMenu } from "@/src/components/desktop/DesktopContextMenu";
@@ -14,23 +13,30 @@ import { WindowManagerProvider, useWindowManager } from "@/src/components/window
 import { WallpaperBackdrop } from "@/src/lib/wallpaper";
 
 export function Desktop() {
-  const { selectedServer } = useSession();
   return (
-    <ServerProvider serverId={selectedServer?.id || ""}>
-      <WindowManagerProvider>
-        <DesktopShell />
-      </WindowManagerProvider>
-    </ServerProvider>
+    <WindowManagerProvider>
+      <DesktopShell />
+    </WindowManagerProvider>
   );
 }
 
 function DesktopShell() {
-  const { logOut, selectedServer } = useSession();
+  const { servers, loadingServers, serversError } = useSession();
+  const connected = servers.filter((item) => item.connected).length;
+  const openedEmpty = useRef(false);
   const { clearFocus, windows, focusedId, closeWindow, openWindow } = useWindowManager();
   const fullscreen = windows.some((item) => item.maximized && !item.minimized);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [notice, setNotice] = useState(false);
   const desktopRuntime = isDesktopRuntime();
+
+  useEffect(() => {
+    if (loadingServers || openedEmpty.current || serversError) return;
+    if (servers.length === 0) {
+      openedEmpty.current = true;
+      openWindow("servers");
+    }
+  }, [loadingServers, openWindow, servers.length, serversError]);
 
   useEffect(() => {
     if (!notice) return;
@@ -130,7 +136,9 @@ function DesktopShell() {
           ServerUI
         </span>
         <span className="mt-2 block text-[13px] leading-5 text-white/85">
-          Your servers.
+          {servers.length === 0
+            ? "No servers yet."
+            : `${connected} of ${servers.length} connected.`}
           <br />
           {desktopRuntime ? "On your desktop." : "In your browser."}
         </span>
@@ -149,7 +157,7 @@ function DesktopShell() {
         aria-label="Server desktop"
         role="application"
       >
-        <DesktopShortcuts serverId={selectedServer?.id || ""} />
+        <DesktopShortcuts serverId="serverui" />
         <WindowManager />
       </div>
       <Dock onComingSoon={showComingSoon} autoHideOverride={fullscreen} />
@@ -159,7 +167,6 @@ function DesktopShell() {
           y={menu.y}
           onClose={() => setMenu(null)}
           onComingSoon={showComingSoon}
-          onLogOut={logOut}
         />
       ) : null}
       {notice ? (

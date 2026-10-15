@@ -10,12 +10,14 @@ import {
   Globe,
   Info,
   LayoutDashboard,
+  Server,
   Settings,
   Terminal,
 } from "lucide-react";
 import type { AppId } from "@/src/data/apps";
 
 export const APP_ICONS: Record<AppId, LucideIcon> = {
+  servers: Server,
   dashboard: LayoutDashboard,
   files: Folder,
   terminal: Terminal,

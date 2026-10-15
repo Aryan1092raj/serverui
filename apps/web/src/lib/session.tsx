@@ -11,10 +11,14 @@ import {
 } from "react";
 import { ApiError } from "@/src/lib/api/client";
 import { type NewServerInput, type Server, type ServerStatus } from "@/src/lib/servers";
+import { isSampleServer, mergeSampleServers } from "@/src/lib/sample-servers";
+import { useWindowServerId } from "@/src/lib/window-server";
 import {
+  connectServer as connectServerApi,
   createServer,
   deleteServer as deleteServerApi,
   disconnectServer as disconnectServerApi,
+  getServerMetrics,
   listServers,
   testServerConnection,
   updateServer as updateServerApi,
@@ -32,6 +36,9 @@ type SessionContextValue = {
   serversError: string | null;
   refreshServers: () => Promise<Server[]>;
   selectServer: (server: Server) => boolean;
+  connectServer: (id: string) => Promise<Server | null>;
+  disconnectServer: (id: string) => Promise<void>;
+  reconnectServer: (id: string) => Promise<Server | null>;
   addServer: (input: NewServerInput) => Promise<Server>;
   updateServer: (id: string, input: NewServerInput) => Promise<Server>;
   deleteServer: (id: string) => Promise<void>;
@@ -53,11 +60,24 @@ function asStatus(value: string | undefined): ServerStatus {
     case "connecting":
     case "error":
     case "authentication_failed":
+    case "reconnecting":
     case "unknown":
       return value;
     default:
       return "unknown";
   }
+}
+
+function keepMetrics(previous: Server | undefined, next: Server): Server {
+  if (!previous) return next;
+  return {
+    ...next,
+    cpuUsage: next.cpuUsage ?? previous.cpuUsage,
+    memoryUsage: next.memoryUsage ?? previous.memoryUsage,
+    diskUsage: next.diskUsage ?? previous.diskUsage,
+    latencyMs: next.latencyMs ?? previous.latencyMs,
+    metricsError: next.metricsError ?? previous.metricsError,
+  };
 }
 
 export function toSessionServer(info: ServerInfo): Server {
@@ -71,8 +91,15 @@ export function toSessionServer(info: ServerInfo): Server {
     sshPort: info.port,
     username: info.username,
     authType: info.authType,
+    iconId: info.iconId || "server",
+    customIcon: info.customIcon === true,
+    updatedAt: info.updatedAt,
     error: info.error,
     lastSeen: info.lastSeen,
+    connected: info.connected === true,
+    cpuUsage: typeof info.cpuUsage === "number" ? info.cpuUsage : undefined,
+    memoryUsage: typeof info.memoryUsage === "number" ? info.memoryUsage : undefined,
+    diskUsage: typeof info.diskUsage === "number" ? info.diskUsage : undefined,
   };
 }
 
@@ -85,11 +112,13 @@ function toWriteInput(input: NewServerInput) {
     authType: input.authType,
     password: input.password,
     privateKey: input.privateKey,
+    iconId: input.iconId,
+    ...(input.iconImage !== undefined ? { iconImage: input.iconImage } : {}),
   };
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [screen, setScreen] = useState<AppScreen>("server-selection");
+  const [screen, setScreen] = useState<AppScreen>("desktop");
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
   const [loadingServers, setLoadingServers] = useState(true);
@@ -98,8 +127,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const refreshServers = useCallback(async () => {
     try {
       const items = await listServers();
-      const next = items.map(toSessionServer);
-      setServers(next);
+      const next = mergeSampleServers(items.map(toSessionServer));
+      setServers((current) =>
+        next.map((item) =>
+          keepMetrics(
+            current.find((row) => row.id === item.id),
+            item,
+          ),
+        ),
+      );
       setServersError(null);
       setSelectedServer((current) => {
         if (!current) return current;
@@ -121,7 +157,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void listServers()
       .then((items) => {
         if (cancelled) return;
-        setServers(items.map(toSessionServer));
+        setServers((current) =>
+          mergeSampleServers(
+            items.map((item) => {
+              const mapped = toSessionServer(item);
+              return keepMetrics(
+                current.find((row) => row.id === mapped.id),
+                mapped,
+              );
+            }),
+          ),
+        );
         setServersError(null);
       })
       .catch((err) => {
@@ -138,11 +184,137 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const selectServer = useCallback((server: Server) => {
-    setSelectedServer(server);
-    setScreen("booting");
-    return true;
+  const connectedKey = servers
+    .filter((item) => item.connected)
+    .map((item) => item.id)
+    .join("\n");
+
+  useEffect(() => {
+    const ids = connectedKey ? connectedKey.split("\n") : [];
+    let cancelled = false;
+
+    async function pullMetrics() {
+      if (!ids.length) return;
+      const queue = [...ids];
+      const worker = async () => {
+        while (!cancelled && queue.length > 0) {
+          const id = queue.shift();
+          if (!id) return;
+          try {
+            const info = await getServerMetrics(id);
+            if (cancelled) return;
+            setServers((current) =>
+              current.map((item) =>
+                item.id === id && item.connected
+                  ? {
+                      ...item,
+                      cpuUsage: info.cpuUsage,
+                      memoryUsage: info.memoryUsage,
+                      diskUsage: info.diskUsage,
+                      metricsError: undefined,
+                    }
+                  : item,
+              ),
+            );
+          } catch {
+            if (cancelled) return;
+            setServers((current) =>
+              current.map((item) =>
+                item.id === id ? { ...item, metricsError: "Metrics unavailable" } : item,
+              ),
+            );
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(3, queue.length) }, () => worker()));
+    }
+
+    if (ids.length) void pullMetrics();
+    const timer = window.setInterval(() => {
+      void refreshServers();
+      void pullMetrics();
+    }, 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [connectedKey, refreshServers]);
+
+  const patchServer = useCallback((id: string, patch: Partial<Server>) => {
+    setServers((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }, []);
+
+  const connectServer = useCallback(
+    async (id: string) => {
+      if (isSampleServer(id)) {
+        throw new Error("Sample servers are preview data and do not open an SSH session.");
+      }
+      patchServer(id, { status: "connecting", error: undefined });
+      const started = Date.now();
+      try {
+        const info = await connectServerApi(id);
+        const next = {
+          ...toSessionServer(info),
+          connected: true,
+          latencyMs: Date.now() - started,
+        };
+        setServers((current) =>
+          current.map((item) => (item.id === id ? keepMetrics(item, next) : item)),
+        );
+        setSelectedServer(next);
+        return next;
+      } catch (err) {
+        await refreshServers();
+        throw err;
+      }
+    },
+    [patchServer, refreshServers],
+  );
+
+  const disconnectServer = useCallback(async (id: string) => {
+    if (isSampleServer(id)) {
+      throw new Error("Sample servers are preview data and do not open an SSH session.");
+    }
+    const info = await disconnectServerApi(id);
+    const next = toSessionServer(info);
+    next.connected = false;
+    setServers((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...next,
+              cpuUsage: undefined,
+              memoryUsage: undefined,
+              diskUsage: undefined,
+              metricsError: undefined,
+            }
+          : item,
+      ),
+    );
+    setSelectedServer((current) => (current?.id === id ? next : current));
+  }, []);
+
+  const reconnectServer = useCallback(
+    async (id: string) => {
+      patchServer(id, { status: "reconnecting", error: undefined, connected: false });
+      try {
+        await disconnectServerApi(id);
+      } catch {
+        // The session may already be gone. Connecting again is the recovery.
+      }
+      return connectServer(id);
+    },
+    [connectServer, patchServer],
+  );
+
+  const selectServer = useCallback(
+    (server: Server) => {
+      setSelectedServer(server);
+      void connectServer(server.id).catch(() => undefined);
+      return true;
+    },
+    [connectServer],
+  );
 
   const addServer = useCallback(async (input: NewServerInput) => {
     const created = toSessionServer(await createServer(toWriteInput(input)));
@@ -154,31 +326,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateServer = useCallback(async (id: string, input: NewServerInput) => {
+    if (isSampleServer(id)) {
+      throw new Error("Sample servers are preview data and cannot be edited.");
+    }
     const updated = toSessionServer(await updateServerApi(id, toWriteInput(input)));
     setServers((current) => current.map((item) => (item.id === id ? updated : item)));
     setSelectedServer((current) => (current?.id === id ? updated : current));
     return updated;
   }, []);
 
-  const deleteServer = useCallback(
-    async (id: string) => {
-      await deleteServerApi(id);
-      setServers((current) => current.filter((item) => item.id !== id));
-      setSelectedServer((current) => {
-        if (current?.id !== id) return current;
-        return null;
-      });
-      setScreen((current) => {
-        if (selectedServer?.id === id && current !== "server-selection") {
-          return "server-selection";
-        }
-        return current;
-      });
-    },
-    [selectedServer?.id],
-  );
+  const deleteServer = useCallback(async (id: string) => {
+    if (isSampleServer(id)) {
+      throw new Error(
+        "Sample servers are preview data. They disappear when this development session stops.",
+      );
+    }
+    await deleteServerApi(id);
+    setServers((current) => current.filter((item) => item.id !== id));
+    setSelectedServer((current) => (current?.id === id ? null : current));
+  }, []);
 
   const testConnection = useCallback(async (id: string) => {
+    if (isSampleServer(id)) {
+      throw new Error("Sample servers are preview data and do not open an SSH session.");
+    }
     const result = await testServerConnection(id);
     const next = toSessionServer(result.server);
     setServers((current) => current.map((item) => (item.id === id ? next : item)));
@@ -190,48 +361,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logOut = useCallback(() => {
-    setScreen("logging-off");
+    setScreen("desktop");
   }, []);
 
   const completeLogOut = useCallback(() => {
-    const id = selectedServer?.id;
-    setSelectedServer(null);
-    setScreen("server-selection");
-    if (id) {
-      void disconnectServerApi(id).catch(() => undefined);
-    }
-    void refreshServers();
-  }, [refreshServers, selectedServer?.id]);
+    setScreen("desktop");
+  }, []);
 
   const backToServers = useCallback(() => {
-    const id = selectedServer?.id;
-    setSelectedServer(null);
-    setScreen("server-selection");
-    if (id) {
-      void disconnectServerApi(id).catch(() => undefined);
-    }
-    void refreshServers();
-  }, [refreshServers, selectedServer?.id]);
+    setScreen("desktop");
+  }, []);
 
   const retryBoot = useCallback(() => {
-    if (!selectedServer) {
-      setScreen("server-selection");
-      return;
-    }
-    setScreen("booting");
-  }, [selectedServer]);
+    setScreen("desktop");
+  }, []);
 
-  const switchServer = useCallback(
-    (server: Server) => {
-      const previous = selectedServer?.id;
-      if (previous && previous !== server.id) {
-        void disconnectServerApi(previous).catch(() => undefined);
-      }
-      setSelectedServer(server);
-      setScreen("booting");
-    },
-    [selectedServer?.id],
-  );
+  // Highlight a server without closing any other session or leaving the desktop.
+  const switchServer = useCallback((server: Server) => {
+    setSelectedServer(server);
+  }, []);
 
   const value = useMemo<SessionContextValue>(
     () => ({
@@ -242,6 +390,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       serversError,
       refreshServers,
       selectServer,
+      connectServer,
+      disconnectServer,
+      reconnectServer,
       addServer,
       updateServer,
       deleteServer,
@@ -261,6 +412,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       serversError,
       refreshServers,
       selectServer,
+      connectServer,
+      disconnectServer,
+      reconnectServer,
       addServer,
       updateServer,
       deleteServer,
@@ -286,8 +440,21 @@ export function useSession() {
 }
 
 export function useSelectedServer() {
+  const scoped = useWindowServerId();
   const context = useContext(SessionContext);
-  return context?.selectedServer ?? null;
+  if (scoped === undefined) return context?.selectedServer ?? null;
+  if (!scoped) return null;
+  const found = context?.servers.find((item) => item.id === scoped);
+  if (found) return found;
+  const removed: Server = {
+    id: scoped,
+    name: "Removed server",
+    hostname: "",
+    address: "",
+    status: "offline",
+    connected: false,
+  };
+  return removed;
 }
 
 export function formatApiError(err: unknown, fallback = "request failed") {

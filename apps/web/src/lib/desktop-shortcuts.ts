@@ -2,7 +2,13 @@
 
 import { useSyncExternalStore } from "react";
 
-export type DesktopShortcut = { path: string; col?: number; row?: number };
+export type DesktopShortcut = {
+  path: string;
+  serverId?: string;
+  serverName?: string;
+  col?: number;
+  row?: number;
+};
 export type Cell = { col: number; row: number };
 
 const KEY_PREFIX = "serverui-desktop-shortcuts:";
@@ -35,13 +41,18 @@ export function parseShortcuts(raw: string | null): DesktopShortcut[] {
     for (const item of parsed) {
       const value = typeof item === "string" ? { path: item } : (item as DesktopShortcut | null);
       if (!value || typeof value.path !== "string" || !value.path.startsWith("/")) continue;
-      if (seen.has(value.path)) continue;
-      seen.add(value.path);
-      out.push(
-        isCell(value.col) && isCell(value.row)
-          ? { path: value.path, col: value.col, row: value.row }
-          : { path: value.path },
-      );
+      const identity = `${value.serverId || ""}:${value.path}`;
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      const next: DesktopShortcut = { path: value.path };
+      if (typeof value.serverId === "string" && value.serverId) next.serverId = value.serverId;
+      if (typeof value.serverName === "string" && value.serverName)
+        next.serverName = value.serverName;
+      if (isCell(value.col) && isCell(value.row)) {
+        next.col = value.col;
+        next.row = value.row;
+      }
+      out.push(next);
     }
     return out;
   } catch {
@@ -96,11 +107,11 @@ export function moveShortcut(
   const from = cells.get(path);
   return items.map((item) => {
     const cell = cells.get(item.path);
-    if (item.path === path) return { path, ...target };
+    if (item.path === path) return { ...item, ...target };
     if (cell && from && cell.col === target.col && cell.row === target.row) {
-      return { path: item.path, ...from };
+      return { ...item, ...from };
     }
-    return cell ? { path: item.path, ...cell } : item;
+    return cell ? { ...item, ...cell } : item;
   });
 }
 
@@ -129,10 +140,11 @@ export function saveDesktopShortcuts(serverId: string, items: DesktopShortcut[])
   window.dispatchEvent(new Event(EVENT));
 }
 
-export function addDesktopShortcut(serverId: string, path: string) {
-  const current = read(serverId);
-  if (!current.some((item) => item.path === path))
-    saveDesktopShortcuts(serverId, [...current, { path }]);
+export function addDesktopShortcut(serverId: string, path: string, serverName?: string) {
+  const current = read("serverui");
+  if (!current.some((item) => item.path === path && (item.serverId || "") === serverId)) {
+    saveDesktopShortcuts("serverui", [...current, { path, serverId, serverName }]);
+  }
 }
 
 export function removeDesktopShortcut(serverId: string, path: string) {
