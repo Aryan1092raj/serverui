@@ -7,8 +7,11 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
+
+import type { Theme } from "@/src/lib/theme";
 
 export type BuiltInWallpaperId = "crescent" | "valley" | "orbit";
 export type WallpaperId = BuiltInWallpaperId | "custom";
@@ -19,7 +22,7 @@ export type WallpaperOption = {
   src: string;
 };
 
-export const WALLPAPERS: readonly WallpaperOption[] = [
+const DARK_WALLPAPERS: readonly WallpaperOption[] = [
   {
     id: "crescent",
     name: "Crescent",
@@ -35,11 +38,53 @@ export const WALLPAPERS: readonly WallpaperOption[] = [
     name: "Orbit",
     src: "/wallpapers/orbit.png",
   },
-] as const;
+];
 
-export const DEFAULT_WALLPAPER_ID: BuiltInWallpaperId = "crescent";
+const LIGHT_WALLPAPERS: readonly WallpaperOption[] = [
+  {
+    id: "valley",
+    name: "Sunrise",
+    src: "/wallpapers/sunrise.png",
+  },
+  {
+    id: "crescent",
+    name: "Fjord",
+    src: "/wallpapers/fjord.png",
+  },
+  {
+    id: "orbit",
+    name: "Alpine",
+    src: "/wallpapers/alpine.png",
+  },
+];
+
+const WALLPAPERS: readonly WallpaperOption[] = DARK_WALLPAPERS;
+
+export function wallpapersFor(theme: Theme): readonly WallpaperOption[] {
+  return theme === "light" ? LIGHT_WALLPAPERS : DARK_WALLPAPERS;
+}
+
+const THEME_EVENT = "serverui-theme";
+
+function readTheme(): Theme {
+  if (typeof document === "undefined") return "dark";
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+
+function subscribeTheme(onStoreChange: () => void) {
+  window.addEventListener(THEME_EVENT, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    window.removeEventListener(THEME_EVENT, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
+
+const DEFAULT_WALLPAPER_ID: BuiltInWallpaperId = "crescent";
+const LIGHT_DEFAULT_WALLPAPER_ID: BuiltInWallpaperId = "valley";
 
 const STORAGE_KEY = "serverui-wallpaper";
+const LIGHT_STORAGE_KEY = "serverui-wallpaper-light";
 const CUSTOM_EVENT = "serverui-wallpaper";
 const MAX_CUSTOM_BYTES = 8 * 1024 * 1024;
 const DB_NAME = "serverui";
@@ -49,6 +94,7 @@ const CUSTOM_KEY = "wallpaper-custom";
 type WallpaperContextValue = {
   wallpaperId: WallpaperId;
   wallpaperSrc: string;
+  wallpapers: readonly WallpaperOption[];
   customSrc: string | null;
   hasCustom: boolean;
   setWallpaper: (id: WallpaperId) => void;
@@ -62,28 +108,37 @@ function isWallpaperId(value: string | null): value is WallpaperId {
   return value === "custom" || WALLPAPERS.some((item) => item.id === value);
 }
 
-function readStoredId(): WallpaperId {
+function defaultWallpaperId(theme: Theme): BuiltInWallpaperId {
+  return theme === "light" ? LIGHT_DEFAULT_WALLPAPER_ID : DEFAULT_WALLPAPER_ID;
+}
+
+function storageKey(theme: Theme) {
+  return theme === "light" ? LIGHT_STORAGE_KEY : STORAGE_KEY;
+}
+
+function readStoredId(theme: Theme = readTheme()): WallpaperId {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
+    const value = localStorage.getItem(storageKey(theme));
     if (isWallpaperId(value)) return value;
   } catch {
     // Ignore private-mode storage failures.
   }
-  return DEFAULT_WALLPAPER_ID;
+  return defaultWallpaperId(theme);
 }
 
-function writeStoredId(id: WallpaperId) {
+function writeStoredId(id: WallpaperId, theme: Theme = readTheme()) {
   try {
-    localStorage.setItem(STORAGE_KEY, id);
+    localStorage.setItem(storageKey(theme), id);
   } catch {
     // Ignore private-mode storage failures.
   }
   window.dispatchEvent(new Event(CUSTOM_EVENT));
 }
 
-function builtInSrc(id: WallpaperId): string {
-  if (id === "custom") return WALLPAPERS[0].src;
-  return WALLPAPERS.find((item) => item.id === id)?.src ?? WALLPAPERS[0].src;
+function builtInSrc(id: WallpaperId, theme: Theme): string {
+  const options = wallpapersFor(theme);
+  if (id === "custom") return options[0].src;
+  return options.find((item) => item.id === id)?.src ?? options[0].src;
 }
 
 function openPrefsDb(): Promise<IDBDatabase> {
@@ -138,7 +193,14 @@ async function deleteCustomBlob() {
 }
 
 export function WallpaperProvider({ children }: { children: ReactNode }) {
-  const [wallpaperId, setWallpaperId] = useState<WallpaperId>(readStoredId);
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "dark" as Theme);
+  const wallpapers = wallpapersFor(theme);
+  const [wallpaperId, setWallpaperId] = useState<WallpaperId>(() => readStoredId(readTheme()));
+  const [themeForId, setThemeForId] = useState<Theme>(theme);
+  if (themeForId !== theme) {
+    setThemeForId(theme);
+    setWallpaperId(readStoredId(theme));
+  }
   const [customUrl, setCustomUrl] = useState<string | null>(null);
   const [hasCustom, setHasCustom] = useState(false);
 
@@ -176,7 +238,7 @@ export function WallpaperProvider({ children }: { children: ReactNode }) {
     void refreshCustom();
 
     function onChange() {
-      setWallpaperId(readStoredId());
+      setWallpaperId(readStoredId(readTheme()));
       void refreshCustom();
     }
 
@@ -198,9 +260,9 @@ export function WallpaperProvider({ children }: { children: ReactNode }) {
     (id: WallpaperId) => {
       if (id === "custom" && !hasCustom && !customUrl) return;
       setWallpaperId(id);
-      writeStoredId(id);
+      writeStoredId(id, theme);
     },
-    [customUrl, hasCustom],
+    [customUrl, hasCustom, theme],
   );
 
   const setCustomWallpaper = useCallback(
@@ -216,7 +278,7 @@ export function WallpaperProvider({ children }: { children: ReactNode }) {
       setHasCustom(true);
       replaceCustomUrl(nextUrl);
       setWallpaperId("custom");
-      writeStoredId("custom");
+      writeStoredId("custom", readTheme());
     },
     [replaceCustomUrl],
   );
@@ -225,18 +287,22 @@ export function WallpaperProvider({ children }: { children: ReactNode }) {
     await deleteCustomBlob();
     setHasCustom(false);
     replaceCustomUrl(null);
-    if (readStoredId() === "custom") {
-      setWallpaperId(DEFAULT_WALLPAPER_ID);
-      writeStoredId(DEFAULT_WALLPAPER_ID);
+    const themeNow = readTheme();
+    if (readStoredId(themeNow) === "custom") {
+      const fallback = defaultWallpaperId(themeNow);
+      setWallpaperId(fallback);
+      writeStoredId(fallback, themeNow);
     }
   }, [replaceCustomUrl]);
 
-  const wallpaperSrc = wallpaperId === "custom" && customUrl ? customUrl : builtInSrc(wallpaperId);
+  const wallpaperSrc =
+    wallpaperId === "custom" && customUrl ? customUrl : builtInSrc(wallpaperId, theme);
 
   const value = useMemo(
     () => ({
       wallpaperId,
       wallpaperSrc,
+      wallpapers,
       customSrc: customUrl,
       hasCustom,
       setWallpaper,
@@ -251,6 +317,7 @@ export function WallpaperProvider({ children }: { children: ReactNode }) {
       setWallpaper,
       wallpaperId,
       wallpaperSrc,
+      wallpapers,
     ],
   );
 

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-import { WALLPAPERS, useWallpaper, type WallpaperId } from "@/src/lib/wallpaper";
+import { useWallpaper, type WallpaperId } from "@/src/lib/wallpaper";
 
 /**
  * Settings: General tab with wallpaper selection.
@@ -12,6 +12,7 @@ export function SettingsApp() {
   const {
     wallpaperId,
     wallpaperSrc,
+    wallpapers,
     customSrc,
     hasCustom,
     setWallpaper,
@@ -53,7 +54,7 @@ export function SettingsApp() {
             role="listbox"
             aria-label="Wallpaper"
           >
-            {WALLPAPERS.map((option) => (
+            {wallpapers.map((option) => (
               <WallpaperChoice
                 key={option.id}
                 id={option.id}
