@@ -128,23 +128,23 @@ function toSession(spec: SampleSpec): Server {
 function buildMetrics(spec: SampleSpec, now: number): ServerInfo {
   const history = Array.from({ length: 60 }, (_, index) => {
     const t = now - (59 - index) * 2000;
-      const cpu = wave(t, spec.cpu, 8, 50_000, 0.4, 96);
-      const memory = wave(t, spec.memory, 4, 70_000, 1.2, 96);
-      const disk = spec.disk;
-      return {
-        t,
-        cpu,
-        cpuUser: cpu * 0.62,
-        cpuSystem: cpu * 0.28,
-        cpuIowait: cpu * 0.1,
-        memory,
-        memUsedBytes: Math.round((memory / 100) * spec.memoryGb * 1024 ** 3),
-        disk,
-        diskReadBps: wave(t, spec.net * 0.15, spec.net * 0.08, 40_000, 0.2),
-        diskWriteBps: wave(t, spec.net * 0.05, spec.net * 0.03, 55_000, 1.4),
-        netRx: wave(t, spec.net, spec.net * 0.35, 30_000, 0.6),
-        netTx: wave(t, spec.net * 0.22, spec.net * 0.1, 36_000, 2.1),
-      };
+    const cpu = wave(t, spec.cpu, 8, 50_000, 0.4, 96);
+    const memory = wave(t, spec.memory, 4, 70_000, 1.2, 96);
+    const disk = spec.disk;
+    return {
+      t,
+      cpu,
+      cpuUser: cpu * 0.62,
+      cpuSystem: cpu * 0.28,
+      cpuIowait: cpu * 0.1,
+      memory,
+      memUsedBytes: Math.round((memory / 100) * spec.memoryGb * 1024 ** 3),
+      disk,
+      diskReadBps: wave(t, spec.net * 0.15, spec.net * 0.08, 40_000, 0.2),
+      diskWriteBps: wave(t, spec.net * 0.05, spec.net * 0.03, 55_000, 1.4),
+      netRx: wave(t, spec.net, spec.net * 0.35, 30_000, 0.6),
+      netTx: wave(t, spec.net * 0.22, spec.net * 0.1, 36_000, 2.1),
+    };
   });
   const latest = history[history.length - 1];
   const memTotal = spec.memoryGb * 1024 ** 3;
@@ -188,7 +188,13 @@ function buildMetrics(spec: SampleSpec, now: number): ServerInfo {
     processCount: 3,
     processes: [
       { pid: 1101, name: "node", cpu: latest.cpu * 0.45, memory: 4.2, memoryBytes: 720_000_000 },
-      { pid: 842, name: "postgres", cpu: latest.cpu * 0.2, memory: 6.1, memoryBytes: 1_100_000_000 },
+      {
+        pid: 842,
+        name: "postgres",
+        cpu: latest.cpu * 0.2,
+        memory: 6.1,
+        memoryBytes: 1_100_000_000,
+      },
       { pid: 1, name: "systemd", cpu: 0.2, memory: 0.3, memoryBytes: 18_000_000 },
     ],
     serviceRunning: 2,
@@ -209,7 +215,14 @@ function buildMetrics(spec: SampleSpec, now: number): ServerInfo {
   };
 }
 
-function wave(t: number, base: number, amp: number, period: number, phase: number, max = Number.POSITIVE_INFINITY) {
+function wave(
+  t: number,
+  base: number,
+  amp: number,
+  period: number,
+  phase: number,
+  max = Number.POSITIVE_INFINITY,
+) {
   const value = base + Math.sin((t / period) * Math.PI * 2 + phase) * amp;
   return Math.round(Math.min(max, Math.max(0, value)) * 10) / 10;
 }

@@ -32,11 +32,16 @@ const NEUTRAL_BUTTON =
 /** Icon and colours for each Test Connection state, shared by the button and result line. */
 const TEST_UI = {
   idle: { Icon: PlugZap, line: "", button: NEUTRAL_BUTTON },
-  testing: { Icon: Loader2, line: "bg-[var(--finder-nav-hover)] text-[var(--finder-muted)]", button: NEUTRAL_BUTTON },
+  testing: {
+    Icon: Loader2,
+    line: "bg-[var(--finder-nav-hover)] text-[var(--finder-muted)]",
+    button: NEUTRAL_BUTTON,
+  },
   ok: {
     Icon: CheckCircle2,
     line: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-    button: "border-emerald-500/40 bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/18 dark:text-emerald-300",
+    button:
+      "border-emerald-500/40 bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/18 dark:text-emerald-300",
   },
   fail: {
     Icon: XCircle,
@@ -255,262 +260,283 @@ export function AddServerModal({
   }
 
   const form = (
-        <form
-          noValidate
-          onSubmit={(event) => void submit(event, false)}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <div className={pane ? "min-h-0 flex-1 space-y-4 overflow-y-auto" : "min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4"}>
-            <div className="rounded-[12px] border border-[var(--finder-hairline)] bg-[var(--finder-toolbar)] p-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="sui-finder-muted text-[11px] font-medium uppercase tracking-[0.14em]">
-                  Server Icon
-                </span>
-                <span className="flex size-9 items-center justify-center">
-                  <ServerIcon
-                    iconId={iconId}
-                    customIcon={server?.customIcon}
-                    serverId={server?.id}
-                    updatedAt={server?.updatedAt}
-                    preview={iconImage}
-                    size={32}
-                  />
-                </span>
-              </div>
-              <ServerIconPicker value={iconId} onChange={selectIcon} />
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <input
-                  ref={iconInput}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="sr-only"
-                  aria-label="Custom server icon"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    chooseIconFile(file);
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => iconInput.current?.click()}
-                  className="sui-finder-control inline-flex h-[28px] items-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-medium"
-                >
-                  <ImagePlus className="size-3.5" />
-                  {customActive ? "Replace Image" : "Choose Image"}
-                </button>
-                {customActive ? (
-                  <button
-                    type="button"
-                    onClick={clearCustomIcon}
-                    className="sui-finder-plain-button rounded-[8px] px-2.5 py-1 text-[12px] font-medium"
-                  >
-                    Remove Image
-                  </button>
-                ) : null}
-                {iconError ? (
-                  <p className="flex min-w-0 items-start gap-1.5 text-[12px] leading-5 text-red-500">
-                    <XCircle aria-hidden className="mt-[3px] size-3.5 shrink-0" />
-                    {iconError}
-                  </p>
-                ) : (
-                  <p className="sui-finder-muted min-w-0 text-[12px] leading-5">
-                    PNG, JPEG, or WebP. A custom image replaces the preset until you remove it.
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-            <Field label="Server Name" error={visibleErrors.name} errorId={ids("name").error}>
-              <input
-                ref={firstField}
-                {...fieldProps("name")}
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  onNameChange?.(event.target.value);
-                }}
-                className="sui-server-input"
-                placeholder="Production"
-                autoComplete="off"
+    <form
+      noValidate
+      onSubmit={(event) => void submit(event, false)}
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        className={
+          pane
+            ? "min-h-0 flex-1 space-y-4 overflow-y-auto"
+            : "min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4"
+        }
+      >
+        <div className="rounded-[12px] border border-[var(--finder-hairline)] bg-[var(--finder-toolbar)] p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="sui-finder-muted text-[11px] font-medium uppercase tracking-[0.14em]">
+              Server Icon
+            </span>
+            <span className="flex size-9 items-center justify-center">
+              <ServerIcon
+                iconId={iconId}
+                customIcon={server?.customIcon}
+                serverId={server?.id}
+                updatedAt={server?.updatedAt}
+                preview={iconImage}
+                size={32}
               />
-            </Field>
-            <Field label="Host / IP" error={visibleErrors.host} errorId={ids("host").error}>
-              <input
-                {...fieldProps("host")}
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                className="sui-server-input"
-                placeholder="203.0.113.10"
-                autoComplete="off"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-            </Field>
-            <Field label="SSH Port" error={visibleErrors.port} errorId={ids("port").error}>
-              <input
-                {...fieldProps("port")}
-                value={port}
-                onChange={(event) => setPort(event.target.value)}
-                className="sui-server-input"
-                inputMode="numeric"
-                placeholder="22"
-              />
-            </Field>
-            <Field label="Username" error={visibleErrors.username} errorId={ids("username").error}>
-              <input
-                {...fieldProps("username")}
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                className="sui-server-input"
-                placeholder="deploy"
-                autoComplete="username"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-            </Field>
-            <fieldset className="col-span-2">
-              <legend className="sui-finder-muted mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em]">
-                Authentication
-              </legend>
-              <div className="sui-finder-segment flex rounded-[8px] p-px" role="group" aria-label="Authentication method">
-                <AuthChoice
-                  selected={auth === "password"}
-                  onSelect={() => setAuth("password")}
-                  label="Password"
-                />
-                <AuthChoice
-                  selected={auth === "private_key"}
-                  onSelect={() => setAuth("private_key")}
-                  label="SSH Private Key"
-                />
-              </div>
-            </fieldset>
-
-            {auth === "password" ? (
-              <Field className="col-span-2" label="Password" error={visibleErrors.secret} errorId={ids("secret").error}>
-                <input
-                  {...fieldProps("secret")}
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="sui-server-input"
-                  placeholder={editing ? "Leave unchanged" : "••••••••••••"}
-                  autoComplete="new-password"
-                />
-              </Field>
-            ) : (
-              <Field
-                className="col-span-2"
-                label="Private Key"
-                error={visibleErrors.secret}
-                errorId={ids("secret").error}
-                hint="Your private key is encrypted before being stored. Passphrase-protected keys are not supported yet."
-              >
-                <textarea
-                  {...fieldProps("secret")}
-                  value={privateKey}
-                  onChange={(event) => setPrivateKey(event.target.value)}
-                  className="sui-server-input min-h-[96px] resize-y font-mono text-[12px] leading-5"
-                  placeholder={
-                    editing
-                      ? "Leave unchanged"
-                      : "-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"
-                  }
-                  spellCheck={false}
-                  autoComplete="off"
-                />
-              </Field>
-            )}
-            </div>
+            </span>
           </div>
-
-          <div
-            className={`shrink-0 space-y-2 ${
-              pane ? "border-t border-[var(--finder-hairline)] bg-[var(--finder-content)] pt-3" : "border-t border-[var(--finder-hairline)] px-4 py-3.5"
-            }`}
-          >
-            {attempt && errorCount ? (
-              <p className="text-[12px] text-red-500" role="alert">
-                {errorCount === 1
-                  ? "Fix the highlighted field to continue."
-                  : `Fix the ${errorCount} highlighted fields to continue.`}
-              </p>
-            ) : error ? (
-              <p className="text-[12px] text-red-500" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            {visibleTest ? (
-              <p
-                role="status"
-                aria-live="polite"
-                className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] leading-5 ${testUi.line}`}
-              >
-                <testUi.Icon aria-hidden className={`mt-0.5 size-3.5 shrink-0${spin}`} />
-                <span>
-                  {visibleTest.status === "testing"
-                    ? `Connecting to ${address.trim()}…`
-                    : visibleTest.message}
-                </span>
-              </p>
-            ) : null}
-
-            <div className="flex flex-wrap items-center gap-2">
+          <ServerIconPicker value={iconId} onChange={selectIcon} />
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <input
+              ref={iconInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              aria-label="Custom server icon"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                chooseIconFile(file);
+              }}
+            />
             <button
               type="button"
-              onClick={() => void runTest()}
-              disabled={busy || visibleTest?.status === "testing"}
-              data-result={visibleTest?.status}
-              className={`inline-flex h-[32px] items-center justify-center gap-1.5 rounded-[8px] border px-3 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${testUi.button}`}
+              onClick={() => iconInput.current?.click()}
+              className="sui-finder-control inline-flex h-[28px] items-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-medium"
             >
-              <testUi.Icon aria-hidden className={`size-3.5${spin}`} />
-              {visibleTest?.status === "testing" ? "Testing…" : "Test Connection"}
+              <ImagePlus className="size-3.5" />
+              {customActive ? "Replace Image" : "Choose Image"}
             </button>
-            <div className="ml-auto flex flex-wrap justify-end gap-2">
+            {customActive ? (
               <button
                 type="button"
-                onClick={onClose}
-                className="sui-finder-plain-button rounded-[8px] px-3 py-1.5 text-[13px] font-medium transition"
+                onClick={clearCustomIcon}
+                className="sui-finder-plain-button rounded-[8px] px-2.5 py-1 text-[12px] font-medium"
               >
-                Cancel
+                Remove Image
               </button>
-              {connectAfterSave && !editing ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={(event) => void submit(event, true)}
-                  className="rounded-[8px] bg-[var(--finder-accent)] px-3 py-1.5 text-[13px] font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {busy ? "Saving…" : "Save & Connect"}
-                </button>
-              ) : null}
-              <button
-                type="submit"
-                disabled={busy}
-                className={`rounded-[8px] px-3 py-1.5 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                  connectAfterSave && !editing
-                    ? "sui-finder-control"
-                    : "bg-[var(--finder-accent)] text-white hover:brightness-110"
-                }`}
-              >
-                {busy ? "Saving…" : "Save Server"}
-              </button>
-            </div>
-            </div>
-            <p className="sui-finder-muted text-[11px] leading-5">
-              Test Connection checks these details without saving them.
-              {editing ? " A blank password or key uses the saved one." : null}
-            </p>
+            ) : null}
+            {iconError ? (
+              <p className="flex min-w-0 items-start gap-1.5 text-[12px] leading-5 text-red-500">
+                <XCircle aria-hidden className="mt-[3px] size-3.5 shrink-0" />
+                {iconError}
+              </p>
+            ) : (
+              <p className="sui-finder-muted min-w-0 text-[12px] leading-5">
+                PNG, JPEG, or WebP. A custom image replaces the preset until you remove it.
+              </p>
+            )}
           </div>
-        </form>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+          <Field label="Server Name" error={visibleErrors.name} errorId={ids("name").error}>
+            <input
+              ref={firstField}
+              {...fieldProps("name")}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                onNameChange?.(event.target.value);
+              }}
+              className="sui-server-input"
+              placeholder="Production"
+              autoComplete="off"
+            />
+          </Field>
+          <Field label="Host / IP" error={visibleErrors.host} errorId={ids("host").error}>
+            <input
+              {...fieldProps("host")}
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+              className="sui-server-input"
+              placeholder="203.0.113.10"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Field>
+          <Field label="SSH Port" error={visibleErrors.port} errorId={ids("port").error}>
+            <input
+              {...fieldProps("port")}
+              value={port}
+              onChange={(event) => setPort(event.target.value)}
+              className="sui-server-input"
+              inputMode="numeric"
+              placeholder="22"
+            />
+          </Field>
+          <Field label="Username" error={visibleErrors.username} errorId={ids("username").error}>
+            <input
+              {...fieldProps("username")}
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              className="sui-server-input"
+              placeholder="deploy"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Field>
+          <fieldset className="col-span-2">
+            <legend className="sui-finder-muted mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em]">
+              Authentication
+            </legend>
+            <div
+              className="sui-finder-segment flex rounded-[8px] p-px"
+              role="group"
+              aria-label="Authentication method"
+            >
+              <AuthChoice
+                selected={auth === "password"}
+                onSelect={() => setAuth("password")}
+                label="Password"
+              />
+              <AuthChoice
+                selected={auth === "private_key"}
+                onSelect={() => setAuth("private_key")}
+                label="SSH Private Key"
+              />
+            </div>
+          </fieldset>
+
+          {auth === "password" ? (
+            <Field
+              className="col-span-2"
+              label="Password"
+              error={visibleErrors.secret}
+              errorId={ids("secret").error}
+            >
+              <input
+                {...fieldProps("secret")}
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="sui-server-input"
+                placeholder={editing ? "Leave unchanged" : "••••••••••••"}
+                autoComplete="new-password"
+              />
+            </Field>
+          ) : (
+            <Field
+              className="col-span-2"
+              label="Private Key"
+              error={visibleErrors.secret}
+              errorId={ids("secret").error}
+              hint="Your private key is encrypted before being stored. Passphrase-protected keys are not supported yet."
+            >
+              <textarea
+                {...fieldProps("secret")}
+                value={privateKey}
+                onChange={(event) => setPrivateKey(event.target.value)}
+                className="sui-server-input min-h-[96px] resize-y font-mono text-[12px] leading-5"
+                placeholder={
+                  editing
+                    ? "Leave unchanged"
+                    : "-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"
+                }
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </Field>
+          )}
+        </div>
+      </div>
+
+      <div
+        className={`shrink-0 space-y-2 ${
+          pane
+            ? "border-t border-[var(--finder-hairline)] bg-[var(--finder-content)] pt-3"
+            : "border-t border-[var(--finder-hairline)] px-4 py-3.5"
+        }`}
+      >
+        {attempt && errorCount ? (
+          <p className="text-[12px] text-red-500" role="alert">
+            {errorCount === 1
+              ? "Fix the highlighted field to continue."
+              : `Fix the ${errorCount} highlighted fields to continue.`}
+          </p>
+        ) : error ? (
+          <p className="text-[12px] text-red-500" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        {visibleTest ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] leading-5 ${testUi.line}`}
+          >
+            <testUi.Icon aria-hidden className={`mt-0.5 size-3.5 shrink-0${spin}`} />
+            <span>
+              {visibleTest.status === "testing"
+                ? `Connecting to ${address.trim()}…`
+                : visibleTest.message}
+            </span>
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void runTest()}
+            disabled={busy || visibleTest?.status === "testing"}
+            data-result={visibleTest?.status}
+            className={`inline-flex h-[32px] items-center justify-center gap-1.5 rounded-[8px] border px-3 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${testUi.button}`}
+          >
+            <testUi.Icon aria-hidden className={`size-3.5${spin}`} />
+            {visibleTest?.status === "testing" ? "Testing…" : "Test Connection"}
+          </button>
+          <div className="ml-auto flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="sui-finder-plain-button rounded-[8px] px-3 py-1.5 text-[13px] font-medium transition"
+            >
+              Cancel
+            </button>
+            {connectAfterSave && !editing ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={(event) => void submit(event, true)}
+                className="rounded-[8px] bg-[var(--finder-accent)] px-3 py-1.5 text-[13px] font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {busy ? "Saving…" : "Save & Connect"}
+              </button>
+            ) : null}
+            <button
+              type="submit"
+              disabled={busy}
+              className={`rounded-[8px] px-3 py-1.5 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                connectAfterSave && !editing
+                  ? "sui-finder-control"
+                  : "bg-[var(--finder-accent)] text-white hover:brightness-110"
+              }`}
+            >
+              {busy ? "Saving…" : "Save Server"}
+            </button>
+          </div>
+        </div>
+        <p className="sui-finder-muted text-[11px] leading-5">
+          Test Connection checks these details without saving them.
+          {editing ? " A blank password or key uses the saved one." : null}
+        </p>
+      </div>
+    </form>
   );
 
   if (pane) {
-    return <div className="animate-pane-in mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col">{form}</div>;
+    return (
+      <div className="animate-pane-in mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col">
+        {form}
+      </div>
+    );
   }
 
   return (

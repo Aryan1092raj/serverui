@@ -73,11 +73,7 @@ export function ServerIcon({
   return (
     <Preset
       size={size}
-      className={
-        size >= 22
-          ? "shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.16)]"
-          : "shrink-0"
-      }
+      className={size >= 22 ? "shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.16)]" : "shrink-0"}
     />
   );
 }

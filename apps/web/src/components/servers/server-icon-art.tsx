@@ -4,14 +4,7 @@ export type ServerArtProps = SVGProps<SVGSVGElement> & { size: number };
 
 function Mark({ size, children, ...rest }: ServerArtProps) {
   return (
-    <svg
-      viewBox="0 0 32 32"
-      width={size}
-      height={size}
-      aria-hidden
-      focusable="false"
-      {...rest}
-    >
+    <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden focusable="false" {...rest}>
       {children}
     </svg>
   );
@@ -38,10 +31,7 @@ export function CloudArt(props: ServerArtProps) {
         fill="#0A84FF"
         d="M8.4 22.6h14.2a4.5 4.5 0 0 0 .4-9 6 6 0 0 0-11.4-1.4 4.3 4.3 0 0 0-3.2 10.4z"
       />
-      <path
-        fill="#7DD3FC"
-        d="M11.2 21.4h9.6a3 3 0 0 0 .3-6 4.2 4.2 0 0 0-8-1 3 3 0 0 0-1.9 7z"
-      />
+      <path fill="#7DD3FC" d="M11.2 21.4h9.6a3 3 0 0 0 .3-6 4.2 4.2 0 0 0-8-1 3 3 0 0 0-1.9 7z" />
     </Mark>
   );
 }
@@ -59,7 +49,10 @@ export function HomelabArt(props: ServerArtProps) {
 export function ProductionArt(props: ServerArtProps) {
   return (
     <Mark {...props}>
-      <path fill="#FF453A" d="M16 3.6c3.4 3.2 5.2 7.2 5.2 11.6V23H10.8v-7.8c0-4.4 1.8-8.4 5.2-11.6z" />
+      <path
+        fill="#FF453A"
+        d="M16 3.6c3.4 3.2 5.2 7.2 5.2 11.6V23H10.8v-7.8c0-4.4 1.8-8.4 5.2-11.6z"
+      />
       <path fill="#FFD60A" d="M12.2 23.2h7.6l-1.4 2.6H13.6z" />
       <path fill="#FF9F0A" d="M13.8 25.6h4.4L16 28.2z" />
       <circle cx="16" cy="13.4" r="2" fill="#FFF" />
@@ -86,8 +79,14 @@ export function DevelopmentArt(props: ServerArtProps) {
 export function StagingArt(props: ServerArtProps) {
   return (
     <Mark {...props}>
-      <path fill="#BF5AF2" d="M12.4 5h7.2v2.4l5 10.2A5 5 0 0 1 20.2 26H11.8a5 5 0 0 1-4.4-8.4l5-10.2z" />
-      <path fill="#F5D0FE" d="M9.2 18.4h13.6l-1.5 2.8a3.6 3.6 0 0 1-3.2 1.9h-4.2a3.6 3.6 0 0 1-3.2-1.9z" />
+      <path
+        fill="#BF5AF2"
+        d="M12.4 5h7.2v2.4l5 10.2A5 5 0 0 1 20.2 26H11.8a5 5 0 0 1-4.4-8.4l5-10.2z"
+      />
+      <path
+        fill="#F5D0FE"
+        d="M9.2 18.4h13.6l-1.5 2.8a3.6 3.6 0 0 1-3.2 1.9h-4.2a3.6 3.6 0 0 1-3.2-1.9z"
+      />
       <rect x="13.6" y="4.2" width="4.8" height="2.2" rx="0.6" fill="#E9D5FF" />
     </Mark>
   );
@@ -119,10 +118,23 @@ export function AiGpuArt(props: ServerArtProps) {
 export function DatabaseArt(props: ServerArtProps) {
   return (
     <Mark {...props}>
-      <path fill="#30D158" d="M8 10.2c0-2.4 3.6-4.2 8-4.2s8 1.8 8 4.2v12.2c0 2.4-3.6 4.2-8 4.2s-8-1.8-8-4.2z" />
+      <path
+        fill="#30D158"
+        d="M8 10.2c0-2.4 3.6-4.2 8-4.2s8 1.8 8 4.2v12.2c0 2.4-3.6 4.2-8 4.2s-8-1.8-8-4.2z"
+      />
       <ellipse cx="16" cy="10.2" rx="8" ry="3.6" fill="#86EFAC" />
-      <path d="M8 15.2c1.8 1.6 4.7 2.5 8 2.5s6.2-.9 8-2.5" fill="none" stroke="#DCFCE7" strokeWidth="1.3" />
-      <path d="M8 19.6c1.8 1.6 4.7 2.5 8 2.5s6.2-.9 8-2.5" fill="none" stroke="#DCFCE7" strokeWidth="1.3" />
+      <path
+        d="M8 15.2c1.8 1.6 4.7 2.5 8 2.5s6.2-.9 8-2.5"
+        fill="none"
+        stroke="#DCFCE7"
+        strokeWidth="1.3"
+      />
+      <path
+        d="M8 19.6c1.8 1.6 4.7 2.5 8 2.5s6.2-.9 8-2.5"
+        fill="none"
+        stroke="#DCFCE7"
+        strokeWidth="1.3"
+      />
     </Mark>
   );
 }
@@ -142,7 +154,12 @@ export function StorageArt(props: ServerArtProps) {
 export function NetworkArt(props: ServerArtProps) {
   return (
     <Mark {...props}>
-      <path d="M10 16.2 16 10.4M16 21.6 10 16.2M16 10.4 23.2 16.2M16 21.6 23.2 16.2" stroke="#0A84FF" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M10 16.2 16 10.4M16 21.6 10 16.2M16 10.4 23.2 16.2M16 21.6 23.2 16.2"
+        stroke="#0A84FF"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       <circle cx="10" cy="16.2" r="3.1" fill="#64D2FF" />
       <circle cx="23.2" cy="16.2" r="3.1" fill="#5E5CE6" />
       <circle cx="16" cy="10.4" r="3.1" fill="#0A84FF" />
@@ -156,7 +173,13 @@ export function WebArt(props: ServerArtProps) {
     <Mark {...props}>
       <circle cx="16" cy="16" r="10" fill="#32ADE6" />
       <ellipse cx="16" cy="16" rx="4.2" ry="10" fill="none" stroke="#E0F2FE" strokeWidth="1.4" />
-      <path d="M6.2 16h19.6M7.6 11.2h16.8M7.6 20.8h16.8" fill="none" stroke="#E0F2FE" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M6.2 16h19.6M7.6 11.2h16.8M7.6 20.8h16.8"
+        fill="none"
+        stroke="#E0F2FE"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
     </Mark>
   );
 }
@@ -166,7 +189,12 @@ export function ContainersArt(props: ServerArtProps) {
     <Mark {...props}>
       <rect x="5" y="14.5" width="14" height="11" rx="2.2" fill="#0A84FF" />
       <rect x="13" y="6.5" width="14" height="11" rx="2.2" fill="#64D2FF" />
-      <path d="M16.2 9.2h7.6M16.2 12.2h7.6M8.2 17.4h7.6M8.2 20.4h7.6" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M16.2 9.2h7.6M16.2 12.2h7.6M8.2 17.4h7.6M8.2 20.4h7.6"
+        stroke="#fff"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
     </Mark>
   );
 }
@@ -174,7 +202,10 @@ export function ContainersArt(props: ServerArtProps) {
 export function SecurityArt(props: ServerArtProps) {
   return (
     <Mark {...props}>
-      <path fill="#30D158" d="M16 4.2 25.4 8v7.2c0 5.4-3.8 8.8-9.4 11.2C10.4 24 6.6 20.6 6.6 15.2V8z" />
+      <path
+        fill="#30D158"
+        d="M16 4.2 25.4 8v7.2c0 5.4-3.8 8.8-9.4 11.2C10.4 24 6.6 20.6 6.6 15.2V8z"
+      />
       <path
         d="M12.2 15.6 15 18.4 20.2 12.6"
         fill="none"

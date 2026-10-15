@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SERVER_ICON, SERVER_ICONS, isServerIconId, serverIcon } from "@/src/lib/server-icons";
+import {
+  DEFAULT_SERVER_ICON,
+  SERVER_ICONS,
+  isServerIconId,
+  serverIcon,
+} from "@/src/lib/server-icons";
 
 describe("server icon registry", () => {
   it("has 16 unique labeled presets and a default", () => {

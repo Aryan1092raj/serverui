@@ -41,7 +41,12 @@ export const SERVER_ICONS = [
   { id: "backup", label: "Backup", keywords: ["archive"], Icon: BackupArt },
   { id: "desktop", label: "Desktop", keywords: ["pc", "workstation"], Icon: DesktopArt },
   { id: "custom", label: "Custom", keywords: ["other"], Icon: CustomArt },
-] as const satisfies readonly { id: string; label: string; keywords: string[]; Icon: ServerArtIcon }[];
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  keywords: string[];
+  Icon: ServerArtIcon;
+}[];
 
 export type ServerIconId = (typeof SERVER_ICONS)[number]["id"];
 
