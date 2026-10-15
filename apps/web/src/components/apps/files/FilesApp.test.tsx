@@ -93,10 +93,17 @@ function select(name: string, modifiers: { ctrlKey?: boolean } = {}) {
 
 vi.mock("@/src/lib/session", () => ({
   useSelectedServer: () => ({ id: "srv-1", name: "Prod", username: "deploy" }),
+  useSession: () => ({
+    servers: [],
+    connectServer: vi.fn(),
+    disconnectServer: vi.fn(),
+    reconnectServer: vi.fn(),
+  }),
 }));
 
 vi.mock("@/src/lib/api/server-context", () => ({
   useServer: () => ({ server: { username: "deploy" } }),
+  useOptionalServer: () => ({ server: { username: "deploy" } }),
 }));
 
 // Most tests here drive the list view (rows are <tr>); Finder icon-view tests set their own view.

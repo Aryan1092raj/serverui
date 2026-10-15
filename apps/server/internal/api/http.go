@@ -65,6 +65,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/files/rename", s.rename)
 	mux.HandleFunc("POST /api/files/copy", s.transfer(s.files.Copy))
 	mux.HandleFunc("POST /api/files/move", s.transfer(s.files.Move))
+	mux.HandleFunc("POST /api/files/transfer", s.transferAcross)
 	mux.HandleFunc("POST /api/files/compress", s.compress)
 	mux.HandleFunc("POST /api/files/upload", s.upload)
 	mux.HandleFunc("DELETE /api/files", s.deleteFile)
@@ -684,6 +685,27 @@ func (s *Server) transfer(op transferFunc) http.HandlerFunc {
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}
+}
+
+func (s *Server) transferAcross(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		FromServerID string `json:"fromServerId"`
+		ToServerID   string `json:"toServerId"`
+		From         string `json:"from"`
+		ToDir        string `json:"toDir"`
+		ToName       string `json:"toName"`
+		Overwrite    bool   `json:"overwrite"`
+		RemoveSource bool   `json:"removeSource"`
+	}
+	if err := decodeJSON(w, r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+		return
+	}
+	if err := s.files.Transfer(r.Context(), body.FromServerID, body.ToServerID, body.From, body.ToDir, body.ToName, body.Overwrite, body.RemoveSource); err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) compress(w http.ResponseWriter, r *http.Request) {

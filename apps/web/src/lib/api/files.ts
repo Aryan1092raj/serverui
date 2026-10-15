@@ -96,6 +96,31 @@ export function copyItem(serverId: string, from: string, to: string, overwrite =
   });
 }
 
+/** Copies a file or folder from one connected server into a directory on another. */
+export function transferItem(
+  fromServerId: string,
+  toServerId: string,
+  from: string,
+  toDir: string,
+  overwrite = false,
+  removeSource = false,
+  toName = "",
+) {
+  return apiRequest<{ status: string }>("/api/files/transfer", {
+    method: "POST",
+    body: JSON.stringify({
+      fromServerId,
+      toServerId,
+      from,
+      toDir,
+      overwrite,
+      removeSource,
+      toName,
+    }),
+    timeoutMs: LONG_OPERATION_MS,
+  });
+}
+
 export function moveItem(serverId: string, from: string, to: string, overwrite = false) {
   return apiRequest<{ status: string }>("/api/files/move", {
     method: "POST",

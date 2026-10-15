@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 export const FILE_DROP_ATTR = "data-file-drop";
+export const SERVER_DROP_ATTR = "data-server-drop";
+export const SERVER_DROP_EVENT = "serverui-file-server-drop";
 
 const THRESHOLD = 5;
 
@@ -12,6 +14,15 @@ export type FileMoveGhost = {
   y: number;
   dest: string | null;
 };
+
+/** Another connected server under the pointer. The server already on screen is ignored. */
+export function serverAtPoint(x: number, y: number) {
+  const node =
+    typeof document.elementFromPoint === "function" ? document.elementFromPoint(x, y) : null;
+  const hit = node instanceof Element ? node.closest(`[${SERVER_DROP_ATTR}]`) : null;
+  if (!hit || hit.getAttribute("aria-current") === "page") return null;
+  return hit.getAttribute(SERVER_DROP_ATTR);
+}
 
 export function destAtPoint(x: number, y: number, source: string, currentPath?: string) {
   const node =
@@ -92,10 +103,21 @@ export function useFileMoveDrag(
         setGhost(null);
         return;
       }
-      const dest = destAtPoint(event.clientX, event.clientY, start.source, currentPathRef.current);
+      const serverId = serverAtPoint(event.clientX, event.clientY);
+      const dest = serverId
+        ? null
+        : destAtPoint(event.clientX, event.clientY, start.source, currentPathRef.current);
       dragging.current = false;
       skipClick.current = true;
       setGhost(null);
+      if (serverId) {
+        window.dispatchEvent(
+          new CustomEvent(SERVER_DROP_EVENT, {
+            detail: { source: start.source, type: start.type, serverId },
+          }),
+        );
+        return;
+      }
       if (dest) onMoveRef.current(start.source, dest, start.type);
     }
 
