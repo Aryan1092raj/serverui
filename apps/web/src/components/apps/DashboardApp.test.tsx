@@ -9,10 +9,16 @@ vi.mock("@/src/lib/session", () => ({
     address: "203.0.113.10",
     username: "deploy",
   }),
+  useSession: () => ({
+    connectServer: vi.fn(),
+    servers: [],
+    loadingServers: false,
+    serversError: null,
+  }),
 }));
 
 vi.mock("@/src/lib/api/server-context", () => ({
-  useServer: () => ({
+  useOptionalServer: () => ({
     server: {
       id: "srv_1",
       name: "Edge",

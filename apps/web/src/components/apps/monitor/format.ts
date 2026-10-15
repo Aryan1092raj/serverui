@@ -19,6 +19,11 @@ export type HistoryPoint = {
   svcFailed: number;
   svcOther: number;
   cores?: number[];
+  /** Logical CPUs for this sample. Absent when the collector did not report capacity. */
+  cpuCount?: number;
+  memTotalBytes?: number;
+  diskUsedBytes?: number;
+  diskTotalBytes?: number;
 };
 
 export type ChartKey = Exclude<keyof HistoryPoint, "t" | "cores">;
