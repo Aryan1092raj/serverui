@@ -29,6 +29,9 @@ const themeScript = `try {
   if (theme !== "light" && theme !== "dark") theme = "dark";
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
+  if (localStorage.getItem("serverui-appearance") === "aura") {
+    document.documentElement.dataset.appearance = "aura";
+  }
 } catch (e) {
   document.documentElement.dataset.theme = "dark";
 }

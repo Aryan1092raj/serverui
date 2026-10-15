@@ -10,25 +10,23 @@ import { TopBar } from "@/src/components/desktop/TopBar";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { WindowManager } from "@/src/components/window/WindowManager";
 import { WindowManagerProvider, useWindowManager } from "@/src/components/window/window-context";
+import { AuraDesktop } from "@/src/components/desktop/AuraDesktop";
+import { useAppearance } from "@/src/lib/appearance";
 import { WallpaperBackdrop } from "@/src/lib/wallpaper";
 
 export function Desktop() {
   return (
     <WindowManagerProvider>
-      <DesktopShell />
+      <DesktopSwitch />
     </WindowManagerProvider>
   );
 }
 
-function DesktopShell() {
+function DesktopSwitch() {
+  const { appearance } = useAppearance();
   const { servers, loadingServers, serversError } = useSession();
-  const connected = servers.filter((item) => item.connected).length;
   const openedEmpty = useRef(false);
-  const { clearFocus, windows, focusedId, closeWindow, openWindow } = useWindowManager();
-  const fullscreen = windows.some((item) => item.maximized && !item.minimized);
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [notice, setNotice] = useState(false);
-  const desktopRuntime = isDesktopRuntime();
+  const { openWindow } = useWindowManager();
 
   useEffect(() => {
     if (loadingServers || openedEmpty.current || serversError) return;
@@ -37,6 +35,18 @@ function DesktopShell() {
       openWindow("servers");
     }
   }, [loadingServers, openWindow, servers.length, serversError]);
+
+  return appearance === "aura" ? <AuraDesktop /> : <DesktopShell />;
+}
+
+function DesktopShell() {
+  const { servers } = useSession();
+  const connected = servers.filter((item) => item.connected).length;
+  const { clearFocus, windows, focusedId, closeWindow, openWindow } = useWindowManager();
+  const fullscreen = windows.some((item) => item.maximized && !item.minimized);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [notice, setNotice] = useState(false);
+  const desktopRuntime = isDesktopRuntime();
 
   useEffect(() => {
     if (!notice) return;
