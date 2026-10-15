@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,7 +15,9 @@ var schemaFS embed.FS
 
 // CurrentSchemaVersion is the latest migration version applied by Migrate.
 // Version 1: servers + server_credentials (+ schema_migrations bookkeeping).
-const CurrentSchemaVersion = 1
+// Version 2: servers.logo, kept so older databases still open.
+// Version 3: servers.icon_id and servers.custom_icon. Icon bytes live on disk.
+const CurrentSchemaVersion = 3
 
 // Migrate applies pending schema migrations for the active storage backend.
 // It never drops user tables or recreates the database.
@@ -35,24 +38,78 @@ func MigrateBackend(ctx context.Context, sqlDB *sql.DB, backend StorageBackend) 
 		return nil
 	}
 
-	schemaFile := "schema.sql"
-	if backend == StorageSQLite {
-		schemaFile = "schema_sqlite.sql"
-	}
-	sqlBytes, err := schemaFS.ReadFile(schemaFile)
-	if err != nil {
-		return fmt.Errorf("read schema: %w", err)
+	if applied < 1 {
+		schemaFile := "schema.sql"
+		if backend == StorageSQLite {
+			schemaFile = "schema_sqlite.sql"
+		}
+		sqlBytes, err := schemaFS.ReadFile(schemaFile)
+		if err != nil {
+			return fmt.Errorf("read schema: %w", err)
+		}
+		if _, err := sqlDB.ExecContext(ctx, string(sqlBytes)); err != nil {
+			return fmt.Errorf("apply schema: %w", err)
+		}
 	}
 
-	// Apply idempotent CREATE IF NOT EXISTS statements.
-	if _, err := sqlDB.ExecContext(ctx, string(sqlBytes)); err != nil {
-		return fmt.Errorf("apply schema: %w", err)
+	if applied < 2 {
+		if err := ensureLogoColumn(ctx, sqlDB, backend); err != nil {
+			return err
+		}
+	}
+	if applied < 3 {
+		if err := ensureTextColumn(ctx, sqlDB, backend, "icon_id", "TEXT NOT NULL DEFAULT 'server'"); err != nil {
+			return err
+		}
+		if err := ensureTextColumn(ctx, sqlDB, backend, "custom_icon", "TEXT NOT NULL DEFAULT ''"); err != nil {
+			return err
+		}
 	}
 
 	if err := recordVersion(ctx, sqlDB, backend, CurrentSchemaVersion); err != nil {
 		return err
 	}
 	return nil
+}
+
+func ensureLogoColumn(ctx context.Context, sqlDB *sql.DB, backend StorageBackend) error {
+	return ensureTextColumn(ctx, sqlDB, backend, "logo", "TEXT NOT NULL DEFAULT ''")
+}
+
+func ensureTextColumn(ctx context.Context, sqlDB *sql.DB, backend StorageBackend, column, definition string) error {
+	present, err := hasColumn(ctx, sqlDB, backend, "servers", column)
+	if err != nil {
+		return err
+	}
+	if present {
+		return nil
+	}
+	query := `ALTER TABLE servers ADD COLUMN ` + column + ` ` + definition
+	if _, err := sqlDB.ExecContext(ctx, query); err != nil {
+		return fmt.Errorf("add servers.%s: %w", column, err)
+	}
+	return nil
+}
+
+func hasColumn(ctx context.Context, sqlDB *sql.DB, backend StorageBackend, table, column string) (bool, error) {
+	var query string
+	var args []any
+	if backend == StorageSQLite {
+		query = `SELECT 1 FROM pragma_table_info('servers') WHERE name = ? LIMIT 1`
+		args = []any{column}
+	} else {
+		query = `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2 LIMIT 1`
+		args = []any{table, column}
+	}
+	var one int
+	err := sqlDB.QueryRowContext(ctx, query, args...).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("check %s.%s: %w", table, column, err)
+	}
+	return true, nil
 }
 
 func ensureMigrationsTable(ctx context.Context, sqlDB *sql.DB, backend StorageBackend) error {

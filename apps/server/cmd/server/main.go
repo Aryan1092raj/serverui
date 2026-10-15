@@ -32,13 +32,17 @@ func main() {
 		log.Fatal("SERVERUI_CREDENTIAL_ENCRYPTION_KEY must be a 32-byte key (64 hex characters). Generate one with: openssl rand -hex 32")
 	}
 
-	sqlDB, err := db.Open()
+	cfg, err := db.ResolveConfig()
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	sqlDB, err := db.OpenConfig(cfg)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
 	defer sqlDB.Close()
 
-	backend := db.ActiveBackend()
+	backend := cfg.Backend
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	if err := db.MigrateBackend(ctx, sqlDB, backend); err != nil {
 		cancel()
@@ -47,6 +51,7 @@ func main() {
 	cancel()
 
 	svc := servers.NewService(servers.NewSQLStoreBackend(sqlDB, backend), box)
+	svc.SetIconDir(servers.IconDirectory(cfg.SQLitePath))
 	pool := svc.Pool()
 	defer pool.DisconnectAll()
 

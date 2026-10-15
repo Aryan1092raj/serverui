@@ -1,4 +1,5 @@
-import { apiRequest } from "@/src/lib/api/client";
+import { apiBlob, apiRequest } from "@/src/lib/api/client";
+import { sampleMetrics } from "@/src/lib/sample-servers";
 
 export type ServerStatus =
   "online" | "offline" | "connecting" | "error" | "authentication_failed" | "unknown";
@@ -93,6 +94,9 @@ export type ServerInfo = {
   port?: number;
   username: string;
   authType?: "password" | "private_key";
+  iconId?: string;
+  customIcon?: boolean;
+  updatedAt?: string;
   cpuUsage: number;
   memoryUsage: number;
   diskUsage: number;
@@ -174,6 +178,8 @@ export type ServerInfo = {
   history?: MonitorHistoryPoint[];
   error?: string;
   lastSeen?: string;
+  /** Live pooled SSH session. Absent on older responses. */
+  connected?: boolean;
 };
 
 export type ServerWriteInput = {
@@ -184,6 +190,9 @@ export type ServerWriteInput = {
   authType: "password" | "private_key";
   password?: string;
   privateKey?: string;
+  iconId?: string;
+  /** Data URL to store, or "" to remove a custom image. Omit to leave it unchanged. */
+  iconImage?: string;
 };
 
 export type ConnectionTestResult = {
@@ -193,12 +202,18 @@ export type ConnectionTestResult = {
   server: ServerInfo;
 };
 
+export function getServerIconBlob(serverId: string) {
+  return apiBlob(`/api/servers/${encodeURIComponent(serverId)}/icon`);
+}
+
 export function getServer(serverId: string, init?: RequestInit) {
   const query = new URLSearchParams({ serverId, _: String(Date.now()) });
   return apiRequest<ServerInfo>(`/api/server?${query.toString()}`, init);
 }
 
 export function getServerMetrics(serverId: string, init?: RequestInit) {
+  const sample = sampleMetrics(serverId);
+  if (sample) return Promise.resolve(sample);
   const query = new URLSearchParams({ serverId, _: String(Date.now()) });
   return apiRequest<ServerInfo>(`/api/server/metrics?${query.toString()}`, {
     ...init,

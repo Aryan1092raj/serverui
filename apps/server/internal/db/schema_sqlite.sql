@@ -1,4 +1,4 @@
--- SQLite schema for ServerUI desktop (version 1)
+-- SQLite schema for ServerUI desktop (version 2)
 -- Timestamps are stored as RFC3339 TEXT; Go supplies values on write.
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS servers (
     status TEXT NOT NULL DEFAULT 'unknown',
     last_error TEXT NOT NULL DEFAULT '',
     last_seen TEXT,
+    logo TEXT NOT NULL DEFAULT '',
+    icon_id TEXT NOT NULL DEFAULT 'server',
+    custom_icon TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

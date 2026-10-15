@@ -40,6 +40,7 @@ func TestSQLiteStoreRoundTrip(t *testing.T) {
 		Username:  "deploy",
 		AuthType:  servers.AuthPassword,
 		Status:    servers.StatusUnknown,
+		IconID:    "production",
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -68,7 +69,7 @@ func TestSQLiteStoreRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	if got.Host != rec.Host || got.Name != rec.Name {
+	if got.Host != rec.Host || got.Name != rec.Name || got.IconID != rec.IconID {
 		t.Fatalf("unexpected record: %+v", got)
 	}
 

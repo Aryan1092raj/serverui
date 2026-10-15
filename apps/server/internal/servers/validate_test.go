@@ -13,6 +13,7 @@ func TestValidateRejectsInvalid(t *testing.T) {
 		Username: "deploy",
 		AuthType: AuthPassword,
 		Password: "secret",
+		IconID:   "production",
 	}
 	if err := Validate(valid, true); err != nil {
 		t.Fatal(err)
@@ -34,6 +35,7 @@ func TestValidateRejectsInvalid(t *testing.T) {
 		{"long name", func(in *Input) { in.Name = strings.Repeat("x", 65) }, "server name is too long", true},
 		{"username space", func(in *Input) { in.Username = "de ploy" }, "invalid username", true},
 		{"username at", func(in *Input) { in.Username = "root@host" }, "invalid username", true},
+		{"icon", func(in *Input) { in.IconID = "not-an-icon" }, "invalid server icon", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

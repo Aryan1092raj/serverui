@@ -22,6 +22,18 @@ func Validate(input Input, requireSecret bool) error {
 	if utf8.RuneCountInString(name) > maxNameLength {
 		return fmt.Errorf("server name is too long")
 	}
+	if _, err := normalizeIconID(input.IconID); err != nil {
+		return err
+	}
+	if input.IconImage != nil && strings.TrimSpace(*input.IconImage) != "" {
+		raw, err := decodeIconPayload(*input.IconImage)
+		if err != nil {
+			return err
+		}
+		if _, err := extForIcon(raw); err != nil {
+			return err
+		}
+	}
 	return ValidateConnection(input, requireSecret)
 }
 
@@ -92,5 +104,10 @@ func Normalize(input Input) Input {
 	}
 	input.Password = strings.TrimSpace(input.Password)
 	input.PrivateKey = strings.TrimSpace(input.PrivateKey)
+	if strings.TrimSpace(input.IconID) == "" {
+		input.IconID = DefaultIconID
+	} else {
+		input.IconID = strings.TrimSpace(input.IconID)
+	}
 	return input
 }

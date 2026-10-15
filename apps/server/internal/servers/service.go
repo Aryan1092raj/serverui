@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"serverui/server/internal/crypto"
@@ -15,10 +16,11 @@ import (
 type Dialer func(cfg sshx.Config, auth sshx.AuthMethod) error
 
 type Service struct {
-	store Store
-	box   crypto.Cipher
-	pool  *sshx.Pool
-	dial  Dialer
+	store   Store
+	box     crypto.Cipher
+	pool    *sshx.Pool
+	dial    Dialer
+	iconDir string
 }
 
 type TestResult struct {
@@ -40,6 +42,10 @@ func NewService(store Store, box crypto.Cipher) *Service {
 
 func (s *Service) Pool() *sshx.Pool {
 	return s.pool
+}
+
+func (s *Service) SetIconDir(dir string) {
+	s.iconDir = dir
 }
 
 func (s *Service) SetDialer(dial Dialer) {
@@ -93,16 +99,23 @@ func (s *Service) Create(ctx context.Context, input Input) (Public, error) {
 	}
 
 	now := time.Now().UTC()
+	id := newID()
+	customIcon, err := s.applyIconImage(id, "", input.IconImage)
+	if err != nil {
+		return Public{}, err
+	}
 	rec := Record{
-		ID:        newID(),
-		Name:      input.Name,
-		Host:      input.Host,
-		Port:      input.Port,
-		Username:  input.Username,
-		AuthType:  input.AuthType,
-		Status:    StatusUnknown,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:         id,
+		Name:       input.Name,
+		Host:       input.Host,
+		Port:       input.Port,
+		Username:   input.Username,
+		AuthType:   input.AuthType,
+		IconID:     input.IconID,
+		CustomIcon: customIcon,
+		Status:     StatusUnknown,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 	cred := Credential{
 		ID:              newID(),
@@ -113,6 +126,7 @@ func (s *Service) Create(ctx context.Context, input Input) (Public, error) {
 		UpdatedAt:       now,
 	}
 	if err := s.store.Create(ctx, rec, cred); err != nil {
+		s.removeIconFiles(id)
 		return Public{}, err
 	}
 	log.Printf("server.created id=%s name=%s host=%s", rec.ID, rec.Name, rec.Host)
@@ -132,14 +146,18 @@ func (s *Service) Update(ctx context.Context, id string, input Input) (Public, e
 		return Public{}, err
 	}
 
+	reconnect := affectsConnection(existing, input, requireSecret)
 	existing.Name = input.Name
 	existing.Host = input.Host
 	existing.Port = input.Port
 	existing.Username = input.Username
 	existing.AuthType = input.AuthType
+	existing.IconID = input.IconID
 	existing.UpdatedAt = time.Now().UTC()
-	existing.LastError = ""
-	existing.Status = StatusUnknown
+	if reconnect {
+		existing.LastError = ""
+		existing.Status = StatusUnknown
+	}
 
 	if requireSecret {
 		secret, err := s.secret(input, true)
@@ -163,13 +181,52 @@ func (s *Service) Update(ctx context.Context, id string, input Input) (Public, e
 		}
 	}
 
-	s.pool.Forget(existing.ID)
+	customIcon, err := s.applyIconImage(existing.ID, existing.CustomIcon, input.IconImage)
+	if err != nil {
+		return Public{}, err
+	}
+	existing.CustomIcon = customIcon
+	if reconnect {
+		s.pool.Forget(existing.ID)
+	}
 	if err := s.store.Update(ctx, existing); err != nil {
 		return Public{}, err
 	}
 	log.Printf("server.updated id=%s name=%s", existing.ID, existing.Name)
-	existing, _ = s.testAndUpdate(ctx, existing, "")
+	if reconnect {
+		existing, _ = s.testAndUpdate(ctx, existing, "")
+	}
 	return s.public(existing), nil
+}
+
+func affectsConnection(existing Record, input Input, secretChanged bool) bool {
+	return secretChanged ||
+		existing.Host != input.Host ||
+		existing.Port != input.Port ||
+		existing.Username != input.Username ||
+		existing.AuthType != input.AuthType
+}
+
+func (s *Service) OpenIcon(ctx context.Context, id string) ([]byte, string, error) {
+	rec, err := s.store.Get(ctx, id)
+	if err != nil {
+		return nil, "", err
+	}
+	if rec.CustomIcon == "" {
+		return nil, "", fmt.Errorf("server icon not found")
+	}
+	return s.ReadIcon(id, rec.CustomIcon)
+}
+
+func (s *Service) applyIconImage(id, current string, image *string) (string, error) {
+	if image == nil {
+		return current, nil
+	}
+	if strings.TrimSpace(*image) == "" {
+		s.removeIconFiles(id)
+		return "", nil
+	}
+	return s.saveIcon(id, *image)
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {
@@ -181,6 +238,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	if err := s.store.Delete(ctx, id); err != nil {
 		return err
 	}
+	s.removeIconFiles(id)
 	log.Printf("server.deleted id=%s name=%s", rec.ID, rec.Name)
 	return nil
 }
@@ -357,11 +415,15 @@ func (s *Service) testAndUpdate(ctx context.Context, rec Record, secret string) 
 }
 
 func (s *Service) public(rec Record) Public {
-	if s.pool != nil && s.pool.IsConnected(rec.ID) {
+	live := s.pool != nil && s.pool.IsConnected(rec.ID)
+	if live {
 		rec.Status = StatusOnline
 		rec.LastError = ""
 	}
-	return rec.Public()
+	out := rec.Public()
+	// Connected means a live pooled SSH session, not a previous successful test.
+	out.Connected = live
+	return out
 }
 
 func authMethod(authType, secret string) (sshx.AuthMethod, error) {

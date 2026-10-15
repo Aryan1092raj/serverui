@@ -54,6 +54,7 @@ describe("AddServerModal", () => {
         authType: "password",
         password: "example-pass",
         privateKey: undefined,
+        iconId: "server",
       },
       { connect: false },
     );

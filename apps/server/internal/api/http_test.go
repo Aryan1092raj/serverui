@@ -50,6 +50,18 @@ func TestListenAddrDesktopOverrideRequiresExplicitFlag(t *testing.T) {
 	}
 }
 
+func TestLocalAuthRejectsIconWithoutToken(t *testing.T) {
+	t.Setenv("SERVERUI_LOCAL_AUTH_TOKEN", "test-local-token-value")
+	t.Setenv("SERVERUI_DESKTOP", "1")
+	handler := (&Server{}).Handler()
+	req := httptest.NewRequest(http.MethodGet, "/api/servers/abc/icon", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status %d", rec.Code)
+	}
+}
+
 func TestLocalAuthRejectsMissingToken(t *testing.T) {
 	t.Setenv("SERVERUI_LOCAL_AUTH_TOKEN", "test-local-token-value")
 	t.Setenv("SERVERUI_DESKTOP", "1")

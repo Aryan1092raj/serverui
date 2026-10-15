@@ -5,7 +5,7 @@ import { ServerStatus } from "@/src/components/server-selection/ServerStatus";
 describe("ServerStatus", () => {
   it("shows Online for a connected server", () => {
     render(<ServerStatus status="online" />);
-    expect(screen.getByText("Online")).toBeInTheDocument();
+    expect(screen.getByText("Connected")).toBeInTheDocument();
   });
 
   it("shows Authentication failed for rejected credentials", () => {
