@@ -8,10 +8,6 @@ you like at once, and use Files, Terminal, and System Monitor across all of them
 from one desktop. Nothing is installed on your servers: the UI never opens SSH, and
 a Go backend stores encrypted credentials and dials each host over plain SSH.
 
-**Prefer installers?** Download macOS / Windows / Linux packages from
-[GitHub Releases](https://github.com/rakhechashubham/serverui/releases)
-(you do not need to build from source). See [docs/releases.md](docs/releases.md).
-
 ![ServerUI desktop: Files on web-01 with the server menu showing four connected servers](docs/images/desktop.jpg)
 
 <table>
@@ -23,6 +19,38 @@ a Go backend stores encrypted credentials and dials each host over plain SSH.
     <td colspan="2"><img src="docs/images/terminal-tabs.jpg" alt="Terminal opened in the copied folder on backup-01, with a second tab on web-01"><br><sub><b>Terminal</b>: open it from any folder, with a tab per server.</sub></td>
   </tr>
 </table>
+
+## Download
+
+**Latest release: [ServerUI 0.3.0](https://github.com/rakhechashubham/serverui/releases/tag/v0.3.0).**
+No need to build from source.
+
+| Platform | Installer |
+| -------- | --------- |
+| macOS (Apple Silicon) | [ServerUI-0.3.0-arm64.dmg](https://github.com/rakhechashubham/serverui/releases/download/v0.3.0/ServerUI-0.3.0-arm64.dmg) |
+| macOS (Intel) | [ServerUI-0.3.0-x64.dmg](https://github.com/rakhechashubham/serverui/releases/download/v0.3.0/ServerUI-0.3.0-x64.dmg) |
+| Windows x64 | [ServerUI-0.3.0-x64-setup.exe](https://github.com/rakhechashubham/serverui/releases/download/v0.3.0/ServerUI-0.3.0-x64-setup.exe) or [.msi](https://github.com/rakhechashubham/serverui/releases/download/v0.3.0/ServerUI-0.3.0-x64.msi) |
+| Linux x64 | [AppImage](https://github.com/rakhechashubham/serverui/releases/download/v0.3.0/ServerUI-0.3.0-x86_64.AppImage) or [.deb](https://github.com/rakhechashubham/serverui/releases/download/v0.3.0/ServerUI-0.3.0-amd64.deb) |
+
+Verify downloads with the release's
+[SHA256SUMS](https://github.com/rakhechashubham/serverui/releases/download/v0.3.0/SHA256SUMS)
+(`shasum -a 256 -c SHA256SUMS --ignore-missing`). The macOS builds are not
+notarized yet, so on first launch right-click the app and choose **Open**.
+See [docs/releases.md](docs/releases.md).
+
+### What's new in 0.3.0
+
+- **Every server on one desktop:** keep several servers connected at once, with
+  their status in the top bar.
+- **System Monitor for the whole fleet:** live CPU, memory, disk, and network for
+  every connected server, plus a comparison table. The process list now shows
+  the busiest processes first.
+- **Copy between servers:** drag a folder from one server onto another in Files.
+- **Terminal tabs:** one tab per server, and Open Terminal from any folder.
+- A plain text editor for remote files, desktop folder shortcuts, the Aura theme,
+  and Microsoft Store packaging.
+
+Full notes: [v0.3.0 release](https://github.com/rakhechashubham/serverui/releases/tag/v0.3.0).
 
 ## Features
 
