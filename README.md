@@ -12,7 +12,17 @@ a Go backend stores encrypted credentials and dials each host over plain SSH.
 [GitHub Releases](https://github.com/rakhechashubham/serverui/releases)
 (you do not need to build from source). See [docs/releases.md](docs/releases.md).
 
-![ServerUI desktop with the file manager open](docs/images/desktop.jpg)
+![ServerUI desktop: Files on web-01 with the server menu showing four connected servers](docs/images/desktop.jpg)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/system-monitor.jpg" alt="System Monitor showing live metrics for four servers"><br><sub><b>System Monitor</b>: every connected server, live.</sub></td>
+    <td width="50%"><img src="docs/images/copy-between-servers.jpg" alt="Files after copying a folder from web-01 to backup-01"><br><sub><b>Copy between servers</b>: drag a folder onto another server in the sidebar.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/images/terminal-tabs.jpg" alt="Terminal opened in the copied folder on backup-01, with a second tab on web-01"><br><sub><b>Terminal</b>: open it from any folder, with a tab per server.</sub></td>
+  </tr>
+</table>
 
 ## Features
 
