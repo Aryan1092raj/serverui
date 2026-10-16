@@ -3,9 +3,10 @@
 ServerUI is a modern, open-source control panel for managing your servers from a browser
 or the native desktop app.
 
-It presents a Linux-inspired desktop UI. You add SSH servers, connect, and use
-Files, Terminal, and live CPU/RAM/disk metrics against the machine you selected. The
-UI never opens SSH. A Go backend stores encrypted credentials and dials each host.
+It presents a Linux-inspired desktop UI. You add SSH servers, connect as many as
+you like at once, and use Files, Terminal, and System Monitor across all of them
+from one desktop. Nothing is installed on your servers: the UI never opens SSH, and
+a Go backend stores encrypted credentials and dials each host over plain SSH.
 
 **Prefer installers?** Download macOS / Windows / Linux packages from
 [GitHub Releases](https://github.com/rakhechashubham/serverui/releases)
@@ -17,20 +18,33 @@ UI never opens SSH. A Go backend stores encrypted credentials and dials each hos
 
 Working in this repository:
 
-- Multi-server add, edit, delete, connect, disconnect, and connection test
+- **All your servers on one desktop:** connect several servers at once; the top bar
+  shows each one's status, and every app works across them
+- Server manager: add, edit, delete, connect, disconnect, and test a connection
+  before saving, with an icon per server
 - SSH password authentication
 - SSH private-key authentication (unencrypted OpenSSH / PEM keys)
-- Browser terminal over WebSocket → SSH PTY
-- Remote file manager (SFTP)
-- Archive extraction in Files (`.zip`, `.tar`, `.tar.gz`/`.tgz`, `.tar.bz2`, `.tar.xz`, `.7z`),
-  run on the server with its own `tar` / `unzip` / `7z`
-- CPU, memory, disk, and uptime metrics from the selected server
-- Linux-inspired desktop, window manager, and server switcher
+- **System Monitor:** a fleet overview of every connected server (CPU, memory,
+  disk, network, and a sortable comparison table), plus per-server CPU, memory,
+  disk, network, processes, and systemd services
+- Process inspection and SIGTERM; start, stop, and restart systemd services
+- **Terminal:** browser terminal over WebSocket → SSH PTY, with a tab per server;
+  open it straight from a folder in Files
+- **Files (SFTP):** a Finder-style file manager with multi-select, drag to move,
+  copy/cut/paste, upload, a download queue, compress, and archive extraction
+  (`.zip`, `.tar`, `.tar.gz`/`.tgz`, `.tar.bz2`, `.tar.xz`, `.7z`, run on the
+  server with its own `tar` / `unzip` / `7z`)
+- **Copy between servers:** drag files or folders onto another connected server
+  in the Files sidebar, or copy on one server and paste on another
+- File previews (images, video, audio, PDF, text and code) and a plain text editor
+  for remote files
+- Linux-inspired desktop with a dock, window manager, wallpapers, folder
+  shortcuts, and macOS or Aura themes
 - AES-256-GCM encryption for stored credentials
 
 Not implemented yet (UI may show Coming Soon):
 
-- In-browser code editor
+- Full in-browser code editor (the current editor is a plain text editor)
 - Application, domain, and database management
 - ServerUI CLI
 - ServerUI agent
@@ -351,6 +365,7 @@ Delivered / in tree:
 - Local SQLite for packaged/default desktop (Postgres remains for web)
 - Desktop packaging matrix (macOS arm64+x64, Windows x64, Linux x64) + release CI
 - Settings (About, runtime, desktop updates UI)
+- Multi-server desktop, fleet System Monitor, cross-server copy, and terminal tabs (0.3.0)
 
 ## FAQ
 
@@ -358,7 +373,13 @@ Delivered / in tree:
 No. The Go server does.
 
 **Can I add many servers?**  
-Yes. Each has its own stored config, encrypted secret, and SSH connection.
+Yes, and you can keep them all connected at once. Each has its own stored config,
+encrypted secret, and SSH connection.
+
+**Do files copied between servers go directly host to host?**  
+No. The ServerUI backend reads from one server over SFTP and writes to the other,
+so the data passes through the machine running the backend (your computer for the
+desktop app).
 
 **Are Applications / Domains / Databases real?**  
 Not yet. Those windows are Coming Soon placeholders.
@@ -372,7 +393,13 @@ No. Makefile targets for them were removed because the code is not in this repos
 - Passphrase-protected private keys are rejected with an explicit error.
 - Host key verification accepts any remote host key (TOFU / pinning is not implemented).
 - There is no user login, SSO, or RBAC for the ServerUI app itself.
-- Editor, Applications, Domains, Databases, and Settings are not implemented.
+- Applications, Domains, and Databases are not implemented. The editor is a plain
+  text editor (files up to 512 KB, no sudo).
+- Process and service actions (kill, start/stop/restart) work in a server's own
+  System Monitor (Servers → View Metrics). In the all-servers monitor opened from
+  the dock they don't act yet.
+- A drop onto another server in the Files sidebar copies into that server's home
+  folder and never overwrites an existing item.
 - CLI and agent are not implemented.
 - Archive extraction needs `tar` (plus `gzip` / `bzip2` / `xz`), Info-ZIP `unzip`, or
   `7z` on the server. Password-protected archives, `.rar`, and single compressed
