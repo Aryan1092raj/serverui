@@ -2,7 +2,6 @@ package sshx
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"golang.org/x/crypto/ssh"

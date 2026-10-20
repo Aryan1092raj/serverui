@@ -28,13 +28,13 @@ type Manager struct {
 	cfg  Config
 	auth AuthMethod
 
-	mu           sync.Mutex
-	client       *ssh.Client
-	status       Status
-	err          string            // legacy short error message
-	structuredErr *SSHError        // structured error for API
-	dialing      bool
-	dialWait     chan struct{}
+	mu            sync.Mutex
+	client        *ssh.Client
+	status        Status
+	err           string    // legacy short error message
+	structuredErr *SSHError // structured error for API
+	dialing       bool
+	dialWait      chan struct{}
 }
 
 func NewManager(cfg Config, auth AuthMethod) *Manager {

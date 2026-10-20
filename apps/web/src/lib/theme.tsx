@@ -86,7 +86,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const resolvedTheme = useSyncExternalStore<"light" | "dark">(
     subscribe,
     () => resolveTheme(readTheme()),
-    () => "dark"
+    () => "dark",
   );
 
   const setTheme = useCallback((next: Theme) => {
@@ -101,7 +101,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ theme, resolvedTheme, setTheme, toggleTheme }),
-    [theme, resolvedTheme, setTheme, toggleTheme]
+    [theme, resolvedTheme, setTheme, toggleTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

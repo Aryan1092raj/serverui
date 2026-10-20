@@ -24,14 +24,14 @@ type Service struct {
 }
 
 type TestResult struct {
-	OK         bool              `json:"ok"`
-	Latency    int64             `json:"latencyMs"`
-	Error      string            `json:"error,omitempty"`       // legacy short message
-	ErrorCode  string            `json:"errorCode,omitempty"`   // machine-readable code
-	ErrorHint  string            `json:"errorHint,omitempty"`   // actionable hint
-	ErrorDocs  string            `json:"errorDocs,omitempty"`   // docs URL
-	Retryable  bool              `json:"retryable,omitempty"`   // whether retry might help
-	Server     Public            `json:"server"`
+	OK        bool   `json:"ok"`
+	Latency   int64  `json:"latencyMs"`
+	Error     string `json:"error,omitempty"`     // legacy short message
+	ErrorCode string `json:"errorCode,omitempty"` // machine-readable code
+	ErrorHint string `json:"errorHint,omitempty"` // actionable hint
+	ErrorDocs string `json:"errorDocs,omitempty"` // docs URL
+	Retryable bool   `json:"retryable,omitempty"` // whether retry might help
+	Server    Public `json:"server"`
 }
 
 func NewService(store Store, box crypto.Cipher) *Service {
@@ -343,14 +343,14 @@ func (s *Service) Test(ctx context.Context, id string) (TestResult, error) {
 		log.Printf("Server connection test failed server=%s", rec.Name)
 		rich := sshx.ToRichResponse(err)
 		return TestResult{
-			OK:         false,
-			Latency:    latency.Milliseconds(),
-			Error:      rec.LastError,
-			ErrorCode:  rich.Code,
-			ErrorHint:  rich.Hint,
-			ErrorDocs:  rich.DocsURL,
-			Retryable:  rich.Retryable,
-			Server:     s.public(rec),
+			OK:        false,
+			Latency:   latency.Milliseconds(),
+			Error:     rec.LastError,
+			ErrorCode: rich.Code,
+			ErrorHint: rich.Hint,
+			ErrorDocs: rich.DocsURL,
+			Retryable: rich.Retryable,
+			Server:    s.public(rec),
 		}, nil
 	}
 	now := time.Now().UTC()

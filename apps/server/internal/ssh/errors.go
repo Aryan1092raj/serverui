@@ -3,7 +3,6 @@ package sshx
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"strings"
 )
 
@@ -20,39 +19,39 @@ const (
 	CodeKeyEmpty               ErrorCode = "SSH_KEY_EMPTY"
 
 	// Network/connection errors
-	CodeDNSResolutionFailed ErrorCode = "SSH_DNS_RESOLUTION_FAILED"
-	CodeConnectionTimeout   ErrorCode = "SSH_CONNECTION_TIMEOUT"
-	CodeConnectionRefused   ErrorCode = "SSH_CONNECTION_REFUSED"
-	CodeHostUnreachable     ErrorCode = "SSH_HOST_UNREACHABLE"
-	CodeConnectionReset     ErrorCode = "SSH_CONNECTION_RESET"
-	CodeNotSSHServer        ErrorCode = "SSH_NOT_SSH_SERVER"
+	CodeDNSResolutionFailed  ErrorCode = "SSH_DNS_RESOLUTION_FAILED"
+	CodeConnectionTimeout    ErrorCode = "SSH_CONNECTION_TIMEOUT"
+	CodeSSHConnectionRefused ErrorCode = "SSH_CONNECTION_REFUSED"
+	CodeHostUnreachable      ErrorCode = "SSH_HOST_UNREACHABLE"
+	CodeSSHConnectionReset   ErrorCode = "SSH_CONNECTION_RESET"
+	CodeNotSSHServer         ErrorCode = "SSH_NOT_SSH_SERVER"
 
 	// Authentication errors
-	CodeAuthFailed           ErrorCode = "SSH_AUTH_FAILED"
+	CodeSSHAuthFailed         ErrorCode = "SSH_AUTH_FAILED"
 	CodeAuthMethodUnsupported ErrorCode = "SSH_AUTH_METHOD_UNSUPPORTED"
-	CodeAuthNoValidMethods   ErrorCode = "SSH_AUTH_NO_VALID_METHODS"
+	CodeAuthNoValidMethods    ErrorCode = "SSH_AUTH_NO_VALID_METHODS"
 
 	// Host key / TOFU errors
-	CodeHostKeyChanged       ErrorCode = "SSH_HOST_KEY_CHANGED"
-	CodeHostKeyVerification  ErrorCode = "SSH_HOST_KEY_VERIFICATION_FAILED"
+	CodeHostKeyChanged      ErrorCode = "SSH_HOST_KEY_CHANGED"
+	CodeHostKeyVerification ErrorCode = "SSH_HOST_KEY_VERIFICATION_FAILED"
 
 	// Generic/internal
-	CodeInternalError        ErrorCode = "SSH_INTERNAL_ERROR"
+	CodeInternalError ErrorCode = "SSH_INTERNAL_ERROR"
 )
 
 // SSHError is a structured error returned by SSH operations.
 // It includes a machine-readable code, user-facing message, actionable hint,
 // and a documentation URL for self-service troubleshooting.
 type SSHError struct {
-	Code     ErrorCode `json:"code"`
-	Message  string    `json:"message"`
-	Hint     string    `json:"hint,omitempty"`
-	DocsURL  string    `json:"docs_url,omitempty"`
-	Retryable bool     `json:"retryable"`
-	Host     string    `json:"host,omitempty"`     // Target host for context
-	Port     int       `json:"port,omitempty"`     // Target port for context
-	Username string    `json:"username,omitempty"` // Username for context
-	Err      error     `json:"-"`                  // Wrapped error (not serialized)
+	Code      ErrorCode `json:"code"`
+	Message   string    `json:"message"`
+	Hint      string    `json:"hint,omitempty"`
+	DocsURL   string    `json:"docs_url,omitempty"`
+	Retryable bool      `json:"retryable"`
+	Host      string    `json:"host,omitempty"`     // Target host for context
+	Port      int       `json:"port,omitempty"`     // Target port for context
+	Username  string    `json:"username,omitempty"` // Username for context
+	Err       error     `json:"-"`                  // Wrapped error (not serialized)
 }
 
 // Error implements the error interface.
@@ -82,9 +81,15 @@ func (e *SSHError) MarshalJSON() ([]byte, error) {
 
 // WithContext adds connection context to the error.
 func (e *SSHError) WithContext(host string, port int, username string) *SSHError {
-	e.Host = host
-	e.Port = port
-	e.Username = username
+	if host != "" {
+		e.Host = host
+	}
+	if port != 0 {
+		e.Port = port
+	}
+	if username != "" {
+		e.Username = username
+	}
 	return e
 }
 
@@ -100,12 +105,12 @@ func (e *SSHError) IsRetryable() bool {
 // ErrKeyPassphraseProtected returns an error for passphrase-protected keys.
 func ErrKeyPassphraseProtected(inner error) *SSHError {
 	return &SSHError{
-		Code:     CodeKeyPassphraseProtected,
-		Message:  "The private key is protected by a passphrase.",
-		Hint:     "ServerUI does not support passphrase-protected keys. Remove the passphrase with: ssh-keygen -p -f /path/to/key -P 'old_passphrase' -N ''",
-		DocsURL:  "https://docs.serverui.app/ssh-keys#removing-a-passphrase",
+		Code:      CodeKeyPassphraseProtected,
+		Message:   "The private key is protected by a passphrase. Passphrase-protected keys are not supported yet.",
+		Hint:      "ServerUI does not support passphrase-protected keys. Remove the passphrase with: ssh-keygen -p -f /path/to/key -P 'old_passphrase' -N ''",
+		DocsURL:   "https://docs.serverui.app/ssh-keys#removing-a-passphrase",
 		Retryable: false,
-		Err:      inner,
+		Err:       inner,
 	}
 }
 
@@ -117,24 +122,24 @@ func ErrKeyInvalidFormat(inner error, formatHint string) *SSHError {
 	}
 	hint += " Convert PuTTY .ppk keys with: puttygen key.ppk -O private-openssh -o key.pem"
 	return &SSHError{
-		Code:     CodeKeyInvalidFormat,
-		Message:  "The private key format is not supported.",
-		Hint:     hint,
-		DocsURL:  "https://docs.serverui.app/ssh-keys#supported-formats",
+		Code:      CodeKeyInvalidFormat,
+		Message:   "The private key format is not supported.",
+		Hint:      hint,
+		DocsURL:   "https://docs.serverui.app/ssh-keys#supported-formats",
 		Retryable: false,
-		Err:      inner,
+		Err:       inner,
 	}
 }
 
 // ErrKeyInvalidPEM returns an error for malformed PEM keys.
 func ErrKeyInvalidPEM(inner error) *SSHError {
 	return &SSHError{
-		Code:     CodeKeyInvalidPEM,
-		Message:  "The private key is not a valid PEM-encoded key.",
-		Hint:     "Paste the full key including the -----BEGIN OPENSSH PRIVATE KEY----- and -----END OPENSSH PRIVATE KEY----- lines. Ensure no extra whitespace or missing lines.",
-		DocsURL:  "https://docs.serverui.app/ssh-keys#pem-format",
+		Code:      CodeKeyInvalidPEM,
+		Message:   "The private key is not a valid PEM-encoded key.",
+		Hint:      "Paste the full key including the -----BEGIN OPENSSH PRIVATE KEY----- and -----END OPENSSH PRIVATE KEY----- lines. Ensure no extra whitespace or missing lines.",
+		DocsURL:   "https://docs.serverui.app/ssh-keys#pem-format",
 		Retryable: false,
-		Err:      inner,
+		Err:       inner,
 	}
 }
 
@@ -146,167 +151,167 @@ func ErrKeyUnsupportedType(inner error, keyType string) *SSHError {
 	}
 	hint += " Generate a new key with: ssh-keygen -t ed25519 -f ~/.ssh/serverui_key"
 	return &SSHError{
-		Code:     CodeKeyUnsupportedType,
-		Message:  "The private key uses an unsupported algorithm.",
-		Hint:     hint,
-		DocsURL:  "https://docs.serverui.app/ssh-keys#supported-algorithms",
+		Code:      CodeKeyUnsupportedType,
+		Message:   "The private key uses an unsupported algorithm.",
+		Hint:      hint,
+		DocsURL:   "https://docs.serverui.app/ssh-keys#supported-algorithms",
 		Retryable: false,
-		Err:      inner,
+		Err:       inner,
 	}
 }
 
 // ErrKeyEmpty returns an error when no key was provided.
 func ErrKeyEmpty() *SSHError {
 	return &SSHError{
-		Code:     CodeKeyEmpty,
-		Message:  "No private key was provided.",
-		Hint:     "Paste your private key in the Private Key field, or switch to Password authentication.",
-		DocsURL:  "https://docs.serverui.app/ssh-keys",
+		Code:      CodeKeyEmpty,
+		Message:   "No private key was provided.",
+		Hint:      "Paste your private key in the Private Key field, or switch to Password authentication.",
+		DocsURL:   "https://docs.serverui.app/ssh-keys",
 		Retryable: false,
 	}
 }
 
 // ErrDNSResolutionFailed returns an error when the hostname cannot be resolved.
 func ErrDNSResolutionFailed(host string, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeDNSResolutionFailed,
-		Message:  "The host name could not be resolved.",
-		Hint:     "Check the Host field for typos. Try using the IP address instead. Verify DNS with: nslookup " + host,
-		DocsURL:  "https://docs.serverui.app/troubleshooting#dns",
+	return (&SSHError{
+		Code:      CodeDNSResolutionFailed,
+		Message:   "The host name could not be resolved.",
+		Hint:      "Check the Host field for typos. Try using the IP address instead. Verify DNS with: nslookup " + host,
+		DocsURL:   "https://docs.serverui.app/troubleshooting#dns",
 		Retryable: true,
-		Err:      inner,
-	}.WithContext(host, 0, "")
+		Err:       inner,
+	}).WithContext(host, 0, "")
 }
 
 // ErrConnectionTimeout returns an error for connection timeouts (wrong port, firewall, host down).
 func ErrConnectionTimeout(host string, port int, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeConnectionTimeout,
-		Message:  "Connection timed out.",
-		Hint:     "Check: (1) The SSH port (default 22) is correct. (2) No firewall blocks the connection. (3) The host is up. Test with: ssh -p " + fmt.Sprintf("%d", port) + " user@" + host,
-		DocsURL:  "https://docs.serverui.app/troubleshooting#timeout",
+	return (&SSHError{
+		Code:      CodeConnectionTimeout,
+		Message:   "Connection timed out.",
+		Hint:      "Check: (1) The SSH port (default 22) is correct. (2) No firewall blocks the connection. (3) The host is up. Test with: ssh -p " + fmt.Sprintf("%d", port) + " user@" + host,
+		DocsURL:   "https://docs.serverui.app/troubleshooting#timeout",
 		Retryable: true,
-		Err:      inner,
-	}.WithContext(host, port, "")
+		Err:       inner,
+	}).WithContext(host, port, "")
 }
 
 // ErrConnectionRefused returns an error when the connection is actively refused.
 func ErrConnectionRefused(host string, port int, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeConnectionRefused,
-		Message:  "Connection refused — nothing is listening on the SSH port.",
-		Hint:     "The host is reachable but no SSH server accepts connections on port " + fmt.Sprintf("%d", port) + ". Verify the SSH service is running and the port is correct.",
-		DocsURL:  "https://docs.serverui.app/troubleshooting#connection-refused",
+	return (&SSHError{
+		Code:      CodeSSHConnectionRefused,
+		Message:   "Connection refused — nothing is listening on the SSH port.",
+		Hint:      "The host is reachable but no SSH server accepts connections on port " + fmt.Sprintf("%d", port) + ". Verify the SSH service is running and the port is correct.",
+		DocsURL:   "https://docs.serverui.app/troubleshooting#connection-refused",
 		Retryable: true,
-		Err:      inner,
-	}.WithContext(host, port, "")
+		Err:       inner,
+	}).WithContext(host, port, "")
 }
 
 // ErrHostUnreachable returns an error when the host is unreachable (no route).
 func ErrHostUnreachable(host string, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeHostUnreachable,
-		Message:  "The host is unreachable from this network.",
-		Hint:     "Check the IP/hostname. Verify network connectivity with: ping " + host + " or traceroute " + host,
-		DocsURL:  "https://docs.serverui.app/troubleshooting#unreachable",
+	return (&SSHError{
+		Code:      CodeHostUnreachable,
+		Message:   "The host is unreachable from this network.",
+		Hint:      "Check the IP/hostname. Verify network connectivity with: ping " + host + " or traceroute " + host,
+		DocsURL:   "https://docs.serverui.app/troubleshooting#unreachable",
 		Retryable: true,
-		Err:      inner,
-	}.WithContext(host, 0, "")
+		Err:       inner,
+	}).WithContext(host, 0, "")
 }
 
 // ErrConnectionReset returns an error when the connection is reset by peer.
 func ErrConnectionReset(host string, port int, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeConnectionReset,
-		Message:  "The server closed the connection unexpectedly.",
-		Hint:     "This often means a firewall or connection limit dropped the session. Check server logs and firewall rules.",
-		DocsURL:  "https://docs.serverui.app/troubleshooting#connection-reset",
+	return (&SSHError{
+		Code:      CodeSSHConnectionReset,
+		Message:   "The server closed the connection unexpectedly.",
+		Hint:      "This often means a firewall or connection limit dropped the session. Check server logs and firewall rules.",
+		DocsURL:   "https://docs.serverui.app/troubleshooting#connection-reset",
 		Retryable: true,
-		Err:      inner,
-	}.WithContext(host, port, "")
+		Err:       inner,
+	}).WithContext(host, port, "")
 }
 
 // ErrNotSSHServer returns an error when the remote service is not SSH.
 func ErrNotSSHServer(host string, port int, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeNotSSHServer,
-		Message:  "The service on this port is not a compatible SSH server.",
-		Hint:     "Verify the SSH port is correct (default 22). Something else (HTTP, database, etc.) is listening on port " + fmt.Sprintf("%d", port) + ".",
-		DocsURL:  "https://docs.serverui.app/troubleshooting#not-ssh",
+	return (&SSHError{
+		Code:      CodeNotSSHServer,
+		Message:   "The service on this port is not a compatible SSH server.",
+		Hint:      "Verify the SSH port is correct (default 22). Something else (HTTP, database, etc.) is listening on port " + fmt.Sprintf("%d", port) + ".",
+		DocsURL:   "https://docs.serverui.app/troubleshooting#not-ssh",
 		Retryable: false,
-		Err:      inner,
-	}.WithContext(host, port, "")
+		Err:       inner,
+	}).WithContext(host, port, "")
 }
 
 // ErrAuthFailed returns an error for authentication failures.
 func ErrAuthFailed(host string, port int, username string, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeAuthFailed,
-		Message:  "Authentication failed.",
-		Hint:     "Check: (1) Username is correct. (2) Password is correct (if using password auth). (3) Private key matches the authorized_keys on the server. (4) Key permissions are 600 (chmod 600 key). Test manually: ssh -p " + fmt.Sprintf("%d", port) + " " + username + "@" + host,
-		DocsURL:  "https://docs.serverui.app/troubleshooting#auth-failed",
+	return (&SSHError{
+		Code:      CodeSSHAuthFailed,
+		Message:   "Authentication failed.",
+		Hint:      "Check: (1) Username is correct. (2) Password is correct (if using password auth). (3) Private key matches the authorized_keys on the server. (4) Key permissions are 600 (chmod 600 key). Test manually: ssh -p " + fmt.Sprintf("%d", port) + " " + username + "@" + host,
+		DocsURL:   "https://docs.serverui.app/troubleshooting#auth-failed",
 		Retryable: false,
-		Err:      inner,
-	}.WithContext(host, port, username)
+		Err:       inner,
+	}).WithContext(host, port, username)
 }
 
 // ErrAuthMethodUnsupported returns an error for unsupported auth methods.
 func ErrAuthMethodUnsupported(method string, inner error) *SSHError {
 	return &SSHError{
-		Code:     CodeAuthMethodUnsupported,
-		Message:  "The authentication method is not supported.",
-		Hint:     "ServerUI supports password and private key (OpenSSH PEM) authentication. Method '" + method + "' is not available.",
-		DocsURL:  "https://docs.serverui.app/authentication",
+		Code:      CodeAuthMethodUnsupported,
+		Message:   "The authentication method is not supported.",
+		Hint:      "ServerUI supports password and private key (OpenSSH PEM) authentication. Method '" + method + "' is not available.",
+		DocsURL:   "https://docs.serverui.app/authentication",
 		Retryable: false,
-		Err:      inner,
+		Err:       inner,
 	}
 }
 
 // ErrAuthNoValidMethods returns an error when no auth methods remain.
 func ErrAuthNoValidMethods(host string, port int, username string, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeAuthNoValidMethods,
-		Message:  "No valid authentication methods remain.",
-		Hint:     "The server rejected all offered credentials. Verify the server allows password or public key auth for user '" + username + "'. Check /etc/ssh/sshd_config for PasswordAuthentication and PubkeyAuthentication.",
-		DocsURL:  "https://docs.serverui.app/troubleshooting#no-auth-methods",
+	return (&SSHError{
+		Code:      CodeAuthNoValidMethods,
+		Message:   "No valid authentication methods remain.",
+		Hint:      "The server rejected all offered credentials. Verify the server allows password or public key auth for user '" + username + "'. Check /etc/ssh/sshd_config for PasswordAuthentication and PubkeyAuthentication.",
+		DocsURL:   "https://docs.serverui.app/troubleshooting#no-auth-methods",
 		Retryable: false,
-		Err:      inner,
-	}.WithContext(host, port, username)
+		Err:       inner,
+	}).WithContext(host, port, username)
 }
 
 // ErrHostKeyChanged returns an error when the host key has changed (TOFU).
 func ErrHostKeyChanged(host string, port int, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeHostKeyChanged,
-		Message:  "The server's host key has changed.",
-		Hint:     "This may indicate a man-in-the-middle attack OR the server was reinstalled. Verify with the server admin. To fix, remove the old key: ssh-keygen -R " + host + " (then re-accept the new key on next connect).",
-		DocsURL:  "https://docs.serverui.app/security#host-key-verification",
+	return (&SSHError{
+		Code:      CodeHostKeyChanged,
+		Message:   "The server's host key has changed.",
+		Hint:      "This may indicate a man-in-the-middle attack OR the server was reinstalled. Verify with the server admin. To fix, remove the old key: ssh-keygen -R " + host + " (then re-accept the new key on next connect).",
+		DocsURL:   "https://docs.serverui.app/security#host-key-verification",
 		Retryable: false,
-		Err:      inner,
-	}.WithContext(host, port, "")
+		Err:       inner,
+	}).WithContext(host, port, "")
 }
 
 // ErrHostKeyVerificationFailed returns an error for host key verification failures.
 func ErrHostKeyVerificationFailed(host string, port int, inner error) *SSHError {
-	return &SSHError{
-		Code:     CodeHostKeyVerification,
-		Message:  "Host key verification failed.",
-		Hint:     "ServerUI currently accepts any host key (TOFU). If you see this, the connection was rejected due to a key mismatch. See: https://docs.serverui.app/security#host-key-verification",
-		DocsURL:  "https://docs.serverui.app/security#host-key-verification",
+	return (&SSHError{
+		Code:      CodeHostKeyVerification,
+		Message:   "Host key verification failed.",
+		Hint:      "ServerUI currently accepts any host key (TOFU). If you see this, the connection was rejected due to a key mismatch. See: https://docs.serverui.app/security#host-key-verification",
+		DocsURL:   "https://docs.serverui.app/security#host-key-verification",
 		Retryable: false,
-		Err:      inner,
-	}.WithContext(host, port, "")
+		Err:       inner,
+	}).WithContext(host, port, "")
 }
 
 // ErrInternal returns a generic internal error.
 func ErrInternal(inner error) *SSHError {
 	return &SSHError{
-		Code:     CodeInternalError,
-		Message:  "An unexpected error occurred.",
-		Hint:     "Please try again. If the problem persists, contact support with the error details.",
-		DocsURL:  "https://docs.serverui.app/support",
+		Code:      CodeInternalError,
+		Message:   "An unexpected error occurred.",
+		Hint:      "Please try again. If the problem persists, contact support with the error details.",
+		DocsURL:   "https://docs.serverui.app/support",
 		Retryable: true,
-		Err:      inner,
+		Err:       inner,
 	}
 }
 
@@ -317,13 +322,21 @@ func ErrInternal(inner error) *SSHError {
 // Classify maps a raw error to a structured SSHError.
 // This is the single entry point for error classification used by all callers.
 func Classify(err error, host string, port int, username string) *SSHError {
+	se := classify(err, host, port, username)
+	if se == nil {
+		return nil
+	}
+	return se.WithContext(host, port, username)
+}
+
+func classify(err error, host string, port int, username string) *SSHError {
 	if err == nil {
 		return nil
 	}
 
 	// Already structured?
 	if se, ok := err.(*SSHError); ok {
-		return se.WithContext(host, port, username)
+		return se
 	}
 
 	msg := strings.ToLower(err.Error())
@@ -389,11 +402,9 @@ func Classify(err error, host string, port int, username string) *SSHError {
 	}
 
 	// 8. Not SSH server
-	if strings.Contains(msg, "handshake failed") &&
-		(strings.Contains(msg, "version string") ||
-			strings.Contains(msg, "no common algorithm") ||
-			strings.Contains(msg, "kex") ||
-			strings.Contains(msg, "protocol")) {
+	if strings.Contains(msg, "handshake failed") ||
+		strings.Contains(msg, "version string") ||
+		strings.Contains(msg, "no common algorithm") {
 		return ErrNotSSHServer(host, port, err)
 	}
 
@@ -446,49 +457,18 @@ func extractKeyType(errMsg string) string {
 	return ""
 }
 
-// ============================================================================
-// Legacy compatibility — for existing code using ClassifyError/PublicError
-// ============================================================================
-
-// ClassifyError returns the legacy (code, message) pair for backward compatibility.
-func ClassifyError(err error) (code, message string) {
-	se := Classify(err, "", 0, "")
-	if se == nil {
-		return "", ""
-	}
-	return string(se.Code), se.Message
-}
-
-// PublicError returns the short API error text for backward compatibility.
-func PublicError(err error) string {
-	se := Classify(err, "", 0, "")
-	if se == nil {
-		return ""
-	}
-	switch se.Code {
-	case CodeKeyPassphraseProtected:
-		return "passphrase-protected private keys are not supported yet"
-	case CodeKeyInvalidFormat, CodeKeyInvalidPEM, CodeKeyUnsupportedType, CodeKeyEmpty:
-		return "invalid private key"
-	case CodeAuthFailed, CodeAuthNoValidMethods, CodeAuthMethodUnsupported:
-		return "authentication failed"
-	case CodeConnectionTimeout, CodeConnectionRefused, CodeHostUnreachable, CodeConnectionReset:
-		return "unable to connect to server"
-	case CodeDNSResolutionFailed:
-		return "host not found"
-	case CodeNotSSHServer:
-		return "not an SSH server"
-	case CodeHostKeyChanged, CodeHostKeyVerification:
-		return "host key verification failed"
-	default:
-		return "ssh connection failed"
-	}
-}
-
 // IsRetryableError checks if an error is retryable (for backward compatibility).
 func IsRetryableError(err error) bool {
-	se := Classify(err, "", 0, "")
-	return se != nil && se.Retryable
+	se := AsSSHError(err)
+	if se == nil {
+		return false
+	}
+	switch se.Code {
+	case CodeDNSResolutionFailed, CodeConnectionTimeout, CodeSSHConnectionRefused,
+		CodeHostUnreachable, CodeSSHConnectionReset, CodeInternalError:
+		return true
+	}
+	return false
 }
 
 // AsSSHError attempts to convert any error to *SSHError.
@@ -515,8 +495,8 @@ func IsNetworkError(err error) bool {
 		return false
 	}
 	switch se.Code {
-	case CodeDNSResolutionFailed, CodeConnectionTimeout, CodeConnectionRefused,
-		CodeHostUnreachable, CodeConnectionReset:
+	case CodeDNSResolutionFailed, CodeConnectionTimeout, CodeSSHConnectionRefused,
+		CodeHostUnreachable, CodeSSHConnectionReset:
 		return true
 	}
 	return false
@@ -529,7 +509,7 @@ func IsAuthError(err error) bool {
 		return false
 	}
 	switch se.Code {
-	case CodeAuthFailed, CodeAuthNoValidMethods, CodeAuthMethodUnsupported:
+	case CodeSSHAuthFailed, CodeAuthNoValidMethods, CodeAuthMethodUnsupported:
 		return true
 	}
 	return false

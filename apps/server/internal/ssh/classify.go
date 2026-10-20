@@ -50,9 +50,9 @@ func PublicError(err error) string {
 		return "passphrase-protected private keys are not supported yet"
 	case CodeKeyInvalidFormat, CodeKeyInvalidPEM, CodeKeyUnsupportedType, CodeKeyEmpty:
 		return "invalid private key"
-	case CodeAuthFailed, CodeAuthNoValidMethods, CodeAuthMethodUnsupported:
+	case CodeSSHAuthFailed, CodeAuthNoValidMethods, CodeAuthMethodUnsupported:
 		return "authentication failed"
-	case CodeConnectionTimeout, CodeConnectionRefused, CodeHostUnreachable, CodeConnectionReset:
+	case CodeConnectionTimeout, CodeSSHConnectionRefused, CodeHostUnreachable, CodeSSHConnectionReset:
 		return "unable to connect to server"
 	case CodeDNSResolutionFailed:
 		return "host not found"
@@ -72,17 +72,17 @@ func legacyCode(code ErrorCode) string {
 		return CodePassphraseRequired
 	case CodeKeyInvalidFormat, CodeKeyInvalidPEM, CodeKeyUnsupportedType, CodeKeyEmpty:
 		return CodeInvalidPrivateKey
-	case CodeAuthFailed, CodeAuthNoValidMethods, CodeAuthMethodUnsupported:
+	case CodeSSHAuthFailed, CodeAuthNoValidMethods, CodeAuthMethodUnsupported:
 		return CodeAuthFailed
 	case CodeConnectionTimeout:
 		return CodeTimeout
-	case CodeConnectionRefused:
+	case CodeSSHConnectionRefused:
 		return CodeConnectionRefused
 	case CodeDNSResolutionFailed:
 		return CodeInvalidHost
 	case CodeHostUnreachable:
 		return CodeUnreachable
-	case CodeConnectionReset:
+	case CodeSSHConnectionReset:
 		return CodeConnectionReset
 	case CodeNotSSHServer:
 		return CodeNotSSH
@@ -96,14 +96,14 @@ func legacyCode(code ErrorCode) string {
 // RichErrorResponse is the new API error format with full details.
 // Use this in new API endpoints instead of plain strings.
 type RichErrorResponse struct {
-	Code     string `json:"code"`
-	Message  string `json:"message"`
-	Hint     string `json:"hint,omitempty"`
-	DocsURL  string `json:"docs_url,omitempty"`
-	Retryable bool  `json:"retryable"`
-	Host     string `json:"host,omitempty"`
-	Port     int    `json:"port,omitempty"`
-	Username string `json:"username,omitempty"`
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	Hint      string `json:"hint,omitempty"`
+	DocsURL   string `json:"docs_url,omitempty"`
+	Retryable bool   `json:"retryable"`
+	Host      string `json:"host,omitempty"`
+	Port      int    `json:"port,omitempty"`
+	Username  string `json:"username,omitempty"`
 }
 
 // ToRichResponse converts an error to a RichErrorResponse.
@@ -143,8 +143,6 @@ func FormatErrorForLog(err error) string {
 	if se.Username != "" {
 		parts = append(parts, "user="+se.Username)
 	}
-	if se.Retryable {
-		parts = append(parts, "retryable=true")
-	}
+	parts = append(parts, fmt.Sprintf("retryable=%t", se.Retryable))
 	return strings.Join(parts, " ")
 }

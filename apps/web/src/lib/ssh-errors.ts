@@ -1,9 +1,11 @@
 /**
  * SSH Error Types for ServerUI
- * 
+ *
  * These types correspond to the Go SSHError struct and RichErrorResponse.
  * Used for displaying actionable error messages to users.
  */
+
+import type { Server } from "./servers";
 
 // Machine-readable error codes for SSH connection failures
 export type SSHErrorCode =
@@ -48,13 +50,13 @@ export type SSHErrorCode =
 // Structured error response from the API
 export interface SSHErrorResponse {
   code: SSHErrorCode;
-  message: string;           // User-facing message (what went wrong)
-  hint?: string;             // Actionable steps to fix
-  docs_url?: string;         // Link to documentation
-  retryable: boolean;        // Whether retrying might help
-  host?: string;             // Target host for context
-  port?: number;             // Target port for context
-  username?: string;         // Username for context
+  message: string; // User-facing message (what went wrong)
+  hint?: string; // Actionable steps to fix
+  docs_url?: string; // Link to documentation
+  retryable: boolean; // Whether retrying might help
+  host?: string; // Target host for context
+  port?: number; // Target port for context
+  username?: string; // Username for context
 }
 
 // Extended server type with structured error info
@@ -82,7 +84,9 @@ export interface TestResult {
 }
 
 // Helper to check if an error is retryable
-export function isRetryableError(error: SSHErrorResponse | TestResultWithError | TestResult): boolean {
+export function isRetryableError(
+  error: SSHErrorResponse | TestResultWithError | TestResult,
+): boolean {
   if ("retryable" in error && typeof error.retryable === "boolean") {
     return error.retryable;
   }
@@ -104,8 +108,11 @@ export function isRetryableError(error: SSHErrorResponse | TestResultWithError |
   return false;
 }
 
+// Anything carrying a code: an API error body or a test result.
+type SSHErrorLike = Pick<SSHErrorResponse, "code" | "message"> | TestResultWithError;
+
 // Helper to check if an error is authentication-related
-export function isAuthError(error: SSHErrorResponse | TestResultWithError): boolean {
+export function isAuthError(error: SSHErrorLike): boolean {
   const authCodes: SSHErrorCode[] = [
     "SSH_AUTH_FAILED",
     "SSH_AUTH_METHOD_UNSUPPORTED",
@@ -122,7 +129,7 @@ export function isAuthError(error: SSHErrorResponse | TestResultWithError): bool
 }
 
 // Helper to check if an error is key-related
-export function isKeyError(error: SSHErrorResponse | TestResultWithError): boolean {
+export function isKeyError(error: SSHErrorLike): boolean {
   const keyCodes: SSHErrorCode[] = [
     "SSH_KEY_PASSPHRASE_PROTECTED",
     "SSH_KEY_INVALID_FORMAT",
@@ -142,7 +149,7 @@ export function isKeyError(error: SSHErrorResponse | TestResultWithError): boole
 }
 
 // Helper to check if an error is network-related
-export function isNetworkError(error: SSHErrorResponse | TestResultWithError): boolean {
+export function isNetworkError(error: SSHErrorLike): boolean {
   const networkCodes: SSHErrorCode[] = [
     "SSH_DNS_RESOLUTION_FAILED",
     "SSH_CONNECTION_TIMEOUT",
@@ -235,10 +242,8 @@ export function getErrorDescription(code: SSHErrorCode): string {
     SSH_NOT_SSH_SERVER:
       "The service on this port is not an SSH server. Verify you're using the correct SSH port.",
 
-    SSH_AUTH_FAILED:
-      "Authentication failed. Check your username, password, or private key.",
-    SSH_AUTH_METHOD_UNSUPPORTED:
-      "The authentication method is not supported by ServerUI.",
+    SSH_AUTH_FAILED: "Authentication failed. Check your username, password, or private key.",
+    SSH_AUTH_METHOD_UNSUPPORTED: "The authentication method is not supported by ServerUI.",
     SSH_AUTH_NO_VALID_METHODS:
       "The server rejected all authentication methods. Check server SSH configuration.",
 
@@ -247,8 +252,7 @@ export function getErrorDescription(code: SSHErrorCode): string {
     SSH_HOST_KEY_VERIFICATION_FAILED:
       "Host key verification failed. The server's identity could not be verified.",
 
-    SSH_INTERNAL_ERROR:
-      "An unexpected error occurred. Please try again or contact support.",
+    SSH_INTERNAL_ERROR: "An unexpected error occurred. Please try again or contact support.",
 
     // Legacy
     invalid_host: "The host name could not be found.",
@@ -274,8 +278,7 @@ export function getErrorHint(code: SSHErrorCode): string {
       "Convert PuTTY .ppk keys: puttygen key.ppk -O private-openssh -o key.pem",
     SSH_KEY_INVALID_PEM:
       "Paste the full key including -----BEGIN OPENSSH PRIVATE KEY----- and -----END OPENSSH PRIVATE KEY----- lines.",
-    SSH_KEY_UNSUPPORTED_TYPE:
-      "Generate a new key: ssh-keygen -t ed25519 -f ~/.ssh/serverui_key",
+    SSH_KEY_UNSUPPORTED_TYPE: "Generate a new key: ssh-keygen -t ed25519 -f ~/.ssh/serverui_key",
     SSH_KEY_EMPTY:
       "Paste your private key in the Private Key field, or switch to Password authentication.",
 
@@ -283,8 +286,7 @@ export function getErrorHint(code: SSHErrorCode): string {
       "Check the Host field for typos. Try using the IP address. Verify with: nslookup <host>",
     SSH_CONNECTION_TIMEOUT:
       "Check: (1) SSH port is correct (default 22). (2) No firewall blocks the connection. (3) Host is up. Test: ssh -p <port> user@host",
-    SSH_CONNECTION_REFUSED:
-      "Verify SSH service is running on the target and the port is correct.",
+    SSH_CONNECTION_REFUSED: "Verify SSH service is running on the target and the port is correct.",
     SSH_HOST_UNREACHABLE:
       "Check the IP/hostname. Test connectivity: ping <host> or traceroute <host>",
     SSH_CONNECTION_RESET:
@@ -304,8 +306,7 @@ export function getErrorHint(code: SSHErrorCode): string {
     SSH_HOST_KEY_VERIFICATION_FAILED:
       "ServerUI currently accepts any host key (TOFU). If you see this, there's a key mismatch.",
 
-    SSH_INTERNAL_ERROR:
-      "Try again. If the problem persists, contact support.",
+    SSH_INTERNAL_ERROR: "Try again. If the problem persists, contact support.",
 
     // Legacy
     invalid_host: "Check the Host / IP field for typos.",
@@ -388,7 +389,7 @@ export function formatSSHError(error: SSHErrorResponse | TestResultWithError | T
     message = error.error || "";
     hint = error.errorHint;
     docsUrl = error.errorDocs;
-    retryable = error.errorRetryable ?? false;
+    retryable = error.retryable ?? false;
   } else if ("error" in error && error.error) {
     // Legacy: infer from error message
     message = error.error;
@@ -396,8 +397,8 @@ export function formatSSHError(error: SSHErrorResponse | TestResultWithError | T
 
   const title = code ? getErrorTitle(code) : "Connection Error";
   const description = code ? getErrorDescription(code) : message;
-  const actionableHint = code ? getErrorHint(code) : hint;
-  const docsLink = code ? getErrorDocsUrl(code) : docsUrl;
+  const actionableHint = hint ?? (code ? getErrorHint(code) : undefined);
+  const docsLink = docsUrl ?? (code ? getErrorDocsUrl(code) : undefined);
 
   return {
     title,

@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { formatConnectionTestMessage, friendlyError } from "./errors";
-import { formatSSHError, isAuthError, isNetworkError, isKeyError, isRetryableError, SSHErrorResponse, getErrorTitle, getErrorHint, getErrorDocsUrl } from "./ssh-errors";
+import {
+  formatSSHError,
+  isAuthError,
+  isNetworkError,
+  isKeyError,
+  isRetryableError,
+  SSHErrorResponse,
+  getErrorTitle,
+  getErrorHint,
+  getErrorDocsUrl,
+} from "./ssh-errors";
 
 describe("friendlyError", () => {
   it("maps authentication failures", () => {
@@ -101,19 +111,29 @@ describe("ssh-errors", () => {
 
   describe("isRetryableError", () => {
     it("returns true for network errors", () => {
-      expect(isRetryableError({ code: "SSH_CONNECTION_TIMEOUT", message: "", retryable: true })).toBe(true);
-      expect(isRetryableError({ code: "SSH_DNS_RESOLUTION_FAILED", message: "", retryable: true })).toBe(true);
+      expect(
+        isRetryableError({ code: "SSH_CONNECTION_TIMEOUT", message: "", retryable: true }),
+      ).toBe(true);
+      expect(
+        isRetryableError({ code: "SSH_DNS_RESOLUTION_FAILED", message: "", retryable: true }),
+      ).toBe(true);
       expect(isRetryableError({ code: "timeout", message: "", retryable: true })).toBe(true);
     });
 
     it("returns false for auth errors", () => {
-      expect(isRetryableError({ code: "SSH_AUTH_FAILED", message: "", retryable: false })).toBe(false);
+      expect(isRetryableError({ code: "SSH_AUTH_FAILED", message: "", retryable: false })).toBe(
+        false,
+      );
       expect(isRetryableError({ code: "auth_failed", message: "", retryable: false })).toBe(false);
     });
 
     it("returns false for key errors", () => {
-      expect(isRetryableError({ code: "SSH_KEY_PASSPHRASE_PROTECTED", message: "", retryable: false })).toBe(false);
-      expect(isRetryableError({ code: "invalid_private_key", message: "", retryable: false })).toBe(false);
+      expect(
+        isRetryableError({ code: "SSH_KEY_PASSPHRASE_PROTECTED", message: "", retryable: false }),
+      ).toBe(false);
+      expect(isRetryableError({ code: "invalid_private_key", message: "", retryable: false })).toBe(
+        false,
+      );
     });
   });
 

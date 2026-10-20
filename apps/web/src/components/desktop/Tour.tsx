@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useWindowManager } from "@/src/components/window/window-context";
+import type { Driver } from "driver.js";
 import { useSession } from "@/src/lib/session";
 
 const STEPS = [
@@ -32,9 +32,8 @@ const STORAGE_KEY = "serverui-tour-completed";
 export function TourProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [driver, setDriver] = useState<any>(null);
+  const [driver, setDriver] = useState<Driver | null>(null);
   const { selectedServer, screen } = useSession();
-  const { openWindow } = useWindowManager();
   const initialized = useRef(false);
 
   // Initialize driver.js on first mount
@@ -46,12 +45,12 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     const hasCompleted = localStorage.getItem(STORAGE_KEY) === "true";
     if (!hasCompleted && screen === "desktop" && selectedServer) {
       // Dynamically import driver.js
-      import("driver.js").then(({ default: Driver }) => {
-        const d = Driver({
+      import("driver.js").then(({ driver: createDriver }) => {
+        const d = createDriver({
           showProgress: true,
           steps: STEPS,
           onDestroyStarted: () => setIsOpen(false),
-          onReset: () => {
+          onDestroyed: () => {
             setIsOpen(false);
             setCurrentStep(0);
           },
@@ -159,7 +158,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
                 className="flex size-7 shrink-0 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white transition"
                 aria-label="Skip tour"
               >
-                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  className="size-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -173,9 +178,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
                     key={i}
                     onClick={() => setCurrentStep(i)}
                     className={`size-2 rounded-full transition ${
-                      i === currentStep
-                        ? "bg-cyan-400 w-6"
-                        : "bg-white/20 hover:bg-white/30"
+                      i === currentStep ? "bg-cyan-400 w-6" : "bg-white/20 hover:bg-white/30"
                     }`}
                     role="tab"
                     aria-selected={i === currentStep}
@@ -220,8 +223,12 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
             }
           }
           @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
           }
         `}</style>
       </div>

@@ -35,9 +35,24 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
   const [showTooltip, setShowTooltip] = useState(false);
 
   const themes: Array<{ value: Theme; icon: React.ReactNode; label: string; ariaLabel: string }> = [
-    { value: "light", icon: <Sun aria-hidden className="size-4" />, label: "Light", ariaLabel: "Light mode" },
-    { value: "dark", icon: <Moon aria-hidden className="size-4" />, label: "Dark", ariaLabel: "Dark mode" },
-    { value: "system", icon: <Monitor aria-hidden className="size-4" />, label: "System", ariaLabel: "System preference" },
+    {
+      value: "light",
+      icon: <Sun aria-hidden className="size-4" />,
+      label: "Light",
+      ariaLabel: "Light mode",
+    },
+    {
+      value: "dark",
+      icon: <Moon aria-hidden className="size-4" />,
+      label: "Dark",
+      ariaLabel: "Dark mode",
+    },
+    {
+      value: "system",
+      icon: <Monitor aria-hidden className="size-4" />,
+      label: "System",
+      ariaLabel: "System preference",
+    },
   ];
 
   // Handle keyboard navigation
@@ -143,29 +158,35 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
     ${isOpen ? "bg-[var(--app-hover)]" : "hover:bg-[var(--app-hover)]"}
   `;
 
-  const buttonClasses = variant === "compact"
-    ? "flex size-8 items-center justify-center rounded-full outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--topbar-fg)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--topbar-bg)]"
-    : "flex size-10 items-center justify-center rounded-full outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--app-border)]";
+  const buttonClasses =
+    variant === "compact"
+      ? "flex size-8 items-center justify-center rounded-full outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--topbar-fg)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--topbar-bg)]"
+      : "flex size-10 items-center justify-center rounded-full outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--app-border)]";
 
-  const activeButtonClasses = variant === "compact"
-    ? "bg-[var(--toggle-active)] text-[var(--toggle-active-fg)] shadow-sm"
-    : "bg-[var(--app-selected)] text-[var(--finder-accent)]";
+  const activeButtonClasses =
+    variant === "compact"
+      ? "bg-[var(--toggle-active)] text-[var(--toggle-active-fg)] shadow-sm"
+      : "bg-[var(--app-selected)] text-[var(--finder-accent)]";
 
-  const inactiveButtonClasses = variant === "compact"
-    ? "text-[var(--topbar-muted)] hover:text-[var(--topbar-fg)]"
-    : "text-[var(--app-muted)] hover:text-[var(--app-fg)]";
+  const inactiveButtonClasses =
+    variant === "compact"
+      ? "text-[var(--topbar-muted)] hover:text-[var(--topbar-fg)]"
+      : "text-[var(--app-muted)] hover:text-[var(--app-fg)]";
 
-  const optionButtonClasses = variant === "compact"
-    ? "flex size-8 items-center justify-center rounded-full outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--topbar-fg)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--topbar-bg)]"
-    : "flex w-full items-center gap-3 px-3 py-2 rounded-lg outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--app-border)] focus-visible:ring-offset-1";
+  const optionButtonClasses =
+    variant === "compact"
+      ? "flex size-8 items-center justify-center rounded-full outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--topbar-fg)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--topbar-bg)]"
+      : "flex w-full items-center gap-3 px-3 py-2 rounded-lg outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--app-border)] focus-visible:ring-offset-1";
 
-  const optionActiveClasses = variant === "compact"
-    ? "bg-[var(--toggle-active)] text-[var(--toggle-active-fg)] shadow-sm"
-    : "bg-[var(--app-selected)] text-[var(--finder-accent)]";
+  const optionActiveClasses =
+    variant === "compact"
+      ? "bg-[var(--toggle-active)] text-[var(--toggle-active-fg)] shadow-sm"
+      : "bg-[var(--app-selected)] text-[var(--finder-accent)]";
 
-  const optionInactiveClasses = variant === "compact"
-    ? "text-[var(--topbar-muted)] hover:text-[var(--topbar-fg)] hover:bg-[var(--topbar-bg)]"
-    : "text-[var(--app-muted)] hover:text-[var(--app-fg)] hover:bg-[var(--app-hover)]";
+  const optionInactiveClasses =
+    variant === "compact"
+      ? "text-[var(--topbar-muted)] hover:text-[var(--topbar-fg)] hover:bg-[var(--topbar-bg)]"
+      : "text-[var(--app-muted)] hover:text-[var(--app-fg)] hover:bg-[var(--app-hover)]";
 
   return (
     <div
@@ -187,9 +208,10 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
           opacity-0 pointer-events-none
           transition-opacity duration-150 ease-out
           z-[100]
-          ${variant === "compact"
-            ? "bg-gray-900/95 border border-white/10 shadow-lg backdrop-blur-sm"
-            : "bg-gray-800/95 border border-white/10 shadow-lg backdrop-blur-sm"
+          ${
+            variant === "compact"
+              ? "bg-gray-900/95 border border-white/10 shadow-lg backdrop-blur-sm"
+              : "bg-gray-800/95 border border-white/10 shadow-lg backdrop-blur-sm"
           }
           ${showTooltip ? "opacity-100" : "opacity-0"}
         `}
@@ -201,9 +223,7 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
         <div
           className="absolute top-full left-1/2 -translate-x-1/2 size-2 rotate-45"
           style={{
-            background: variant === "compact"
-              ? "rgba(17, 24, 39, 0.95)"
-              : "rgba(31, 41, 55, 0.95)",
+            background: variant === "compact" ? "rgba(17, 24, 39, 0.95)" : "rgba(31, 41, 55, 0.95)",
             borderRight: "1px solid rgba(255, 255, 255, 0.1)",
             borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
           }}
@@ -255,7 +275,9 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
           {themes.map((t, index) => (
             <button
               key={t.value}
-              ref={(el) => { buttonRefs.current[index] = el; }}
+              ref={(el) => {
+                buttonRefs.current[index] = el;
+              }}
               type="button"
               role="option"
               aria-selected={theme === t.value}
@@ -285,9 +307,7 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
               </span>
               {variant === "full" && <span className="text-sm font-medium">{t.label}</span>}
               {theme === t.value && (
-                <span className={variant === "compact" ? "ml-auto" : "ml-auto"}>
-                  ✓
-                </span>
+                <span className={variant === "compact" ? "ml-auto" : "ml-auto"}>✓</span>
               )}
             </button>
           ))}

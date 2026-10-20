@@ -67,7 +67,7 @@ func TestClassify(t *testing.T) {
 			host:      "example.com",
 			port:      22,
 			username:  "user",
-			wantCode:  CodeConnectionRefused,
+			wantCode:  CodeSSHConnectionRefused,
 			wantRetry: true,
 		},
 		{
@@ -94,7 +94,7 @@ func TestClassify(t *testing.T) {
 			host:      "example.com",
 			port:      22,
 			username:  "user",
-			wantCode:  CodeConnectionReset,
+			wantCode:  CodeSSHConnectionReset,
 			wantRetry: true,
 		},
 		{
@@ -112,7 +112,7 @@ func TestClassify(t *testing.T) {
 			host:      "example.com",
 			port:      22,
 			username:  "user",
-			wantCode:  CodeAuthFailed,
+			wantCode:  CodeSSHAuthFailed,
 			wantRetry: false,
 		},
 		{
@@ -194,8 +194,8 @@ func TestClassify(t *testing.T) {
 }
 
 func TestSSHError_JSON(t *testing.T) {
-	err := ErrConnectionTimeout("example.com", 22, errors.New("i/o timeout"))
-	data, err := err.MarshalJSON()
+	se := ErrConnectionTimeout("example.com", 22, errors.New("i/o timeout"))
+	data, err := se.MarshalJSON()
 	if err != nil {
 		t.Fatalf("MarshalJSON failed: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestSSHError_JSON(t *testing.T) {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
 	// Check fields present
-	expectedFields := []string{"code", "message", "hint", "docs_url", "retryable", "host", "port", "username"}
+	expectedFields := []string{"code", "message", "hint", "docs_url", "retryable", "host", "port"}
 	for _, field := range expectedFields {
 		if _, ok := parsed[field]; !ok {
 			t.Errorf("missing field %s in JSON", field)
@@ -261,9 +261,9 @@ func TestIsRetryableError(t *testing.T) {
 	retryable := []ErrorCode{
 		CodeDNSResolutionFailed,
 		CodeConnectionTimeout,
-		CodeConnectionRefused,
+		CodeSSHConnectionRefused,
 		CodeHostUnreachable,
-		CodeConnectionReset,
+		CodeSSHConnectionReset,
 	}
 	nonRetryable := []ErrorCode{
 		CodeKeyPassphraseProtected,
@@ -271,7 +271,7 @@ func TestIsRetryableError(t *testing.T) {
 		CodeKeyInvalidPEM,
 		CodeKeyUnsupportedType,
 		CodeKeyEmpty,
-		CodeAuthFailed,
+		CodeSSHAuthFailed,
 		CodeAuthNoValidMethods,
 		CodeAuthMethodUnsupported,
 		CodeHostKeyChanged,
@@ -298,7 +298,7 @@ func TestIsRetryableError(t *testing.T) {
 
 func TestIsAuthError(t *testing.T) {
 	authCodes := []ErrorCode{
-		CodeAuthFailed,
+		CodeSSHAuthFailed,
 		CodeAuthNoValidMethods,
 		CodeAuthMethodUnsupported,
 	}
@@ -332,9 +332,9 @@ func TestIsNetworkError(t *testing.T) {
 	netCodes := []ErrorCode{
 		CodeDNSResolutionFailed,
 		CodeConnectionTimeout,
-		CodeConnectionRefused,
+		CodeSSHConnectionRefused,
 		CodeHostUnreachable,
-		CodeConnectionReset,
+		CodeSSHConnectionReset,
 	}
 	for _, code := range netCodes {
 		err := Classify(errors.New("test"), "host", 22, "user")

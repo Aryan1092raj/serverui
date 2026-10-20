@@ -2,7 +2,7 @@
  * Map API / network failures to short, actionable product copy.
  * Never include credentials, tokens, or private key material.
  */
-import { formatSSHError, SSHErrorResponse, isAuthError, isNetworkError, isKeyError, isRetryableError } from "./ssh-errors";
+import { formatSSHError, type SSHErrorResponse } from "./ssh-errors";
 
 export function sanitizeErrorText(value: string) {
   return value
@@ -127,4 +127,11 @@ export function formatConnectionTestMessage(
 }
 
 // Re-export SSH error utilities for convenience
-export { formatSSHError, SSHErrorResponse, isAuthError, isNetworkError, isKeyError, isRetryableError } from "./ssh-errors";
+export {
+  formatSSHError,
+  isAuthError,
+  isNetworkError,
+  isKeyError,
+  isRetryableError,
+} from "./ssh-errors";
+export type { SSHErrorResponse } from "./ssh-errors";

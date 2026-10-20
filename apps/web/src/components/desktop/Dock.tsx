@@ -463,10 +463,10 @@ export function Dock({ autoHideOverride = false }: DockProps) {
               id === "terminal"
                 ? { "data-tour": "dock-terminal" }
                 : id === "files"
-                ? { "data-tour": "dock-files" }
-                : id === "monitor"
-                ? { "data-tour": "dock-monitor" }
-                : {};
+                  ? { "data-tour": "dock-files" }
+                  : id === "dashboard"
+                    ? { "data-tour": "dock-monitor" }
+                    : {};
 
             return (
               <button

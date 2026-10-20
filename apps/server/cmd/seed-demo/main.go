@@ -33,11 +33,11 @@ const (
 
 func main() {
 	var (
-		usePostgres    = false
-		useSQLite      = false
-		encryptionKey  = ""
-		sqlitePath     = ""
-		demoHost       = ""
+		usePostgres   = false
+		useSQLite     = false
+		encryptionKey = ""
+		sqlitePath    = ""
+		demoHost      = ""
 	)
 
 	// Parse flags
@@ -175,7 +175,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`Usage: go run ./cmd/seed-demo [options]
+	fmt.Print(`Usage: go run ./cmd/seed-demo [options]
 
 Options:
   --postgres           Use PostgreSQL backend (default: auto-detect from SERVERUI_STORAGE)
