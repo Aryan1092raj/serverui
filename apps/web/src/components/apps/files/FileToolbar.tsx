@@ -25,6 +25,7 @@ export const toolbarClass =
 /** Finder-style unified toolbar; doubles as the window's drag region. */
 export function FileToolbar({
   title,
+  icon,
   canGoBack,
   canGoForward,
   onBack,
@@ -47,6 +48,7 @@ export function FileToolbar({
   onTerminalHere,
 }: {
   title: string;
+  icon?: ReactNode;
   canGoBack: boolean;
   canGoForward: boolean;
   onBack: () => void;
@@ -102,7 +104,10 @@ export function FileToolbar({
           <ChevronRight aria-hidden className="size-[18px]" strokeWidth={2} />
         </ToolbarIconButton>
       </div>
-      <h2 className="min-w-0 flex-1 truncate text-[14px] font-semibold">{title}</h2>
+      <h2 className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-[14px] font-semibold">
+        {icon}
+        <span className="truncate">{title}</span>
+      </h2>
       <div
         role="radiogroup"
         aria-label="View"

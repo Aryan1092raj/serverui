@@ -33,6 +33,9 @@ const themeScript = `try {
   if (resolved !== "light" && resolved !== "dark") resolved = "dark";
   document.documentElement.dataset.theme = resolved;
   document.documentElement.style.colorScheme = resolved;
+  if (localStorage.getItem("serverui-appearance") === "aura") {
+    document.documentElement.dataset.appearance = "aura";
+  }
 } catch (e) {
   document.documentElement.dataset.theme = "dark";
   document.documentElement.style.colorScheme = "dark";

@@ -2,8 +2,10 @@
 
 import { useRef, useState } from "react";
 
-import { WALLPAPERS, useWallpaper, type WallpaperId } from "@/src/lib/wallpaper";
+import { AppearanceSettings } from "@/src/components/shell/AppearanceSettings";
 import { ThemeToggleFull } from "@/src/components/desktop/ThemeToggle";
+import { useAppearance, type AppearanceId } from "@/src/lib/appearance";
+import { useWallpaper, type WallpaperId } from "@/src/lib/wallpaper";
 
 /**
  * Settings: General tab with wallpaper selection.
@@ -13,6 +15,7 @@ export function SettingsApp() {
   const {
     wallpaperId,
     wallpaperSrc,
+    wallpapers,
     customSrc,
     hasCustom,
     setWallpaper,
@@ -21,6 +24,7 @@ export function SettingsApp() {
   } = useWallpaper();
   const [wallpaperError, setWallpaperError] = useState<string | null>(null);
   const wallpaperInputRef = useRef<HTMLInputElement>(null);
+  const { appearance, setAppearance } = useAppearance();
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden sui-app">
@@ -44,7 +48,7 @@ export function SettingsApp() {
       </aside>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 py-8">
         <h3 className="text-2xl font-semibold tracking-tight sui-title">General</h3>
-        
+
         {/* Appearance Section */}
         <section
           className="sui-card mt-6 max-w-2xl space-y-3 rounded-[14px] p-4"
@@ -54,13 +58,39 @@ export function SettingsApp() {
             Appearance
           </h4>
           <p className="text-sm leading-6 sui-muted">
-            Choose your preferred color scheme. System preference will automatically match your OS setting.
+            Choose your preferred color scheme. System preference will automatically match your OS
+            setting.
           </p>
           <div className="flex items-center gap-3">
             <ThemeToggleFull />
           </div>
         </section>
 
+        <section
+          className="sui-card mt-6 max-w-2xl space-y-3 rounded-[14px] p-4"
+          aria-label="Theme"
+        >
+          <h4 className="text-sm font-medium sui-title">Theme</h4>
+          <p className="text-sm leading-6 sui-muted">
+            macOS is the current desktop. Aura uses a side rail and tinted surfaces. Light and Dark
+            apply to both.
+          </p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Theme">
+            <ThemeChoice
+              id="macos"
+              label="macOS"
+              selected={appearance === "macos"}
+              onSelect={() => setAppearance("macos")}
+            />
+            <ThemeChoice
+              id="aura"
+              label="Aura"
+              selected={appearance === "aura"}
+              onSelect={() => setAppearance("aura")}
+            />
+          </div>
+          {appearance === "aura" ? <AppearanceSettings /> : null}
+        </section>
         <section
           className="sui-card mt-6 max-w-2xl space-y-3 rounded-[14px] p-4"
           aria-labelledby="settings-wallpaper"
@@ -77,7 +107,7 @@ export function SettingsApp() {
             role="listbox"
             aria-label="Wallpaper"
           >
-            {WALLPAPERS.map((option) => (
+            {wallpapers.map((option) => (
               <WallpaperChoice
                 key={option.id}
                 id={option.id}
@@ -167,6 +197,31 @@ export function SettingsApp() {
         </section>
       </div>
     </div>
+  );
+}
+
+function ThemeChoice({
+  label,
+  selected,
+  onSelect,
+}: {
+  id: AppearanceId;
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={`rounded-full px-4 py-1.5 text-sm outline-none ${
+        selected ? "bg-[var(--toggle-active)] text-[var(--toggle-active-fg)]" : "sui-card sui-title"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

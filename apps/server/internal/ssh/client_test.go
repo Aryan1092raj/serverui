@@ -53,6 +53,83 @@ func TestDialUnreachable(t *testing.T) {
 	}
 }
 
+func TestPoolConcurrentConnectionsAreIndependent(t *testing.T) {
+	password := "correct-horse"
+	addrA := startTestSSHServer(t, "deploy", password, nil)
+	addrB := startTestSSHServer(t, "deploy", password, nil)
+	addrC := startTestSSHServer(t, "deploy", password, nil)
+	addrs := map[string]string{"a": addrA, "b": addrB, "c": addrC}
+	loads := map[string]int{}
+
+	pool := NewPool(func(id string) (Config, AuthMethod, error) {
+		loads[id]++
+		if id == "bad" {
+			host, port := splitAddr(t, addrA)
+			return Config{Host: host, Port: port, Username: "deploy"}, PasswordAuth{Password: "wrong"}, nil
+		}
+		addr, ok := addrs[id]
+		if !ok {
+			return Config{}, nil, fmt.Errorf("unknown server %s", id)
+		}
+		host, port := splitAddr(t, addr)
+		return Config{Host: host, Port: port, Username: "deploy"}, PasswordAuth{Password: password}, nil
+	})
+
+	for _, id := range []string{"a", "b", "c"} {
+		if _, err := pool.Ensure(id); err != nil {
+			t.Fatalf("ensure %s: %v", id, err)
+		}
+	}
+	// A second ensure must reuse the pooled client instead of dialing again.
+	clientA, err := pool.Ensure("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientA2, err := pool.Ensure("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clientA != clientA2 {
+		t.Fatal("repeated ensure created another client")
+	}
+	if loads["a"] != 1 || loads["b"] != 1 || loads["c"] != 1 {
+		t.Fatalf("loads = %#v", loads)
+	}
+	for _, id := range []string{"a", "b", "c"} {
+		if !pool.IsConnected(id) {
+			t.Fatalf("%s not connected", id)
+		}
+	}
+
+	if _, err := pool.Ensure("bad"); err == nil {
+		t.Fatal("expected authentication failure")
+	}
+	if pool.IsConnected("bad") {
+		t.Fatal("failed auth left a live session")
+	}
+	if !pool.IsConnected("a") || !pool.IsConnected("b") || !pool.IsConnected("c") {
+		t.Fatal("auth failure disturbed other sessions")
+	}
+
+	if err := pool.Disconnect("b"); err != nil {
+		t.Fatal(err)
+	}
+	if pool.IsConnected("b") {
+		t.Fatal("b still connected")
+	}
+	if !pool.IsConnected("a") || !pool.IsConnected("c") {
+		t.Fatal("disconnect closed an unrelated session")
+	}
+
+	pool.Forget("c")
+	if pool.IsConnected("c") {
+		t.Fatal("c still connected after forget")
+	}
+	if !pool.IsConnected("a") {
+		t.Fatal("forget closed an unrelated session")
+	}
+}
+
 func TestPoolIsolatesServers(t *testing.T) {
 	calls := map[string]int{}
 	pool := NewPool(func(id string) (Config, AuthMethod, error) {

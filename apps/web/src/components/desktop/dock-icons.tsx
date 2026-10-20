@@ -44,6 +44,20 @@ function MacDuskIcon({
   );
 }
 
+export function ServersGlyph({ className }: IconProps) {
+  return (
+    <span className={`sui-mac-app-icon ${className ?? ""}`} aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/serverui-icon.png"
+        alt=""
+        draggable={false}
+        className="block size-full object-cover"
+      />
+    </span>
+  );
+}
+
 export function DashboardGlyph({ className }: IconProps) {
   const ctx = useOptionalServer();
   const online = ctx?.server?.status === "online";
@@ -84,6 +98,7 @@ export function InfoGlyph({ className }: IconProps) {
 }
 
 export const DOCK_GLYPHS: Record<DockAppId | "info", ComponentType<IconProps>> = {
+  servers: ServersGlyph,
   dashboard: DashboardGlyph,
   files: FilesGlyph,
   terminal: TerminalGlyph,

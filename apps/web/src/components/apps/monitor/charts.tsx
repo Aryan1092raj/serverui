@@ -28,22 +28,8 @@ const CHART_BUCKETS = 64;
 const SPARK_W = 240;
 const SPARK_H = 48;
 
-function seriesSignature(values: number[]) {
-  if (values.length === 0) return "0";
-  let sum = 0;
-  let min = values[0];
-  let max = values[0];
-  for (const value of values) {
-    sum += value;
-    if (value < min) min = value;
-    if (value > max) max = value;
-  }
-  return `${values.length}:${values[0]}:${values[values.length - 1]}:${min}:${max}:${sum.toFixed(2)}`;
-}
-
 function useDisplayValues(values: number[], buckets: number) {
-  const signature = seriesSignature(values);
-  const target = useMemo(() => downsampleAvg(values, buckets), [buckets, signature, values]);
+  const target = useMemo(() => downsampleAvg(values, buckets), [buckets, values]);
   const [display, setDisplay] = useState(target);
 
   useEffect(() => {
@@ -221,14 +207,7 @@ export function AreaChart({
             {ticks.map((tick) => {
               const y = seriesY("cpu", tick);
               return (
-                <line
-                  key={tick}
-                  x1={padL}
-                  y1={y}
-                  x2={width}
-                  y2={y}
-                  stroke="rgba(255,255,255,0.06)"
-                />
+                <line key={tick} x1={padL} y1={y} x2={width} y2={y} stroke="var(--chart-grid)" />
               );
             })}
             {hover ? (
@@ -237,7 +216,7 @@ export function AreaChart({
                 x2={hover.x}
                 y1={0}
                 y2={plotH}
-                stroke="rgba(255,255,255,0.4)"
+                stroke="var(--chart-guide)"
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
               />
@@ -404,8 +383,8 @@ export function ProcessUsageChart({
         const y = padY + innerH - (tick / max) * innerH;
         return (
           <g key={tick}>
-            <line x1="36" y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.06)" />
-            <text x="0" y={y + 3} fill="rgba(255,255,255,0.35)" fontSize="10">
+            <line x1="36" y1={y} x2={width} y2={y} stroke="var(--chart-grid)" />
+            <text x="0" y={y + 3} fill="var(--chart-label)" fontSize="10">
               {tick}%
             </text>
           </g>
@@ -433,7 +412,7 @@ export function ProcessUsageChart({
           key={`${label}-${index}`}
           x={36 + (index / Math.max(1, labels.length - 1)) * (width - 36)}
           y={height - 2}
-          fill="rgba(255,255,255,0.35)"
+          fill="var(--chart-label)"
           fontSize="10"
           textAnchor={index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle"}
         >
@@ -488,8 +467,8 @@ export function ServiceStatusChart({
         const y = padY + innerH - tick * innerH;
         return (
           <g key={tick}>
-            <line x1="36" y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.06)" />
-            <text x="0" y={y + 3} fill="rgba(255,255,255,0.35)" fontSize="10">
+            <line x1="36" y1={y} x2={width} y2={y} stroke="var(--chart-grid)" />
+            <text x="0" y={y + 3} fill="var(--chart-label)" fontSize="10">
               {Math.round(tick * max)}
             </text>
           </g>
@@ -517,7 +496,7 @@ export function ServiceStatusChart({
           key={`${label}-${index}`}
           x={36 + (index / Math.max(1, labels.length - 1)) * (width - 36)}
           y={height - 2}
-          fill="rgba(255,255,255,0.35)"
+          fill="var(--chart-label)"
           fontSize="10"
           textAnchor={index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle"}
         >
@@ -581,8 +560,8 @@ export function StackedMemoryChart({
         const y = padY + innerH - tick * innerH;
         return (
           <g key={tick}>
-            <line x1="44" y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.06)" />
-            <text x="0" y={y + 3} fill="rgba(255,255,255,0.35)" fontSize="10">
+            <line x1="44" y1={y} x2={width} y2={y} stroke="var(--chart-grid)" />
+            <text x="0" y={y + 3} fill="var(--chart-label)" fontSize="10">
               {tick === 0 ? "0" : formatBytes(tick * max, 0)}
             </text>
           </g>
@@ -613,7 +592,7 @@ export function StackedMemoryChart({
           key={`${label}-${index}`}
           x={44 + (index / Math.max(1, labels.length - 1)) * (width - 44)}
           y={height - 2}
-          fill="rgba(255,255,255,0.35)"
+          fill="var(--chart-label)"
           fontSize="10"
           textAnchor={index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle"}
         >
@@ -680,8 +659,8 @@ export function DiskIOChart({ points, height = 180 }: { points: HistoryPoint[]; 
         const y = padY + innerH - tick * innerH;
         return (
           <g key={tick}>
-            <line x1="52" y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.06)" />
-            <text x="0" y={y + 3} fill="rgba(255,255,255,0.35)" fontSize="10">
+            <line x1="52" y1={y} x2={width} y2={y} stroke="var(--chart-grid)" />
+            <text x="0" y={y + 3} fill="var(--chart-label)" fontSize="10">
               {tick === 0 ? "0" : formatRate(tick * max)}
             </text>
           </g>
@@ -711,7 +690,7 @@ export function DiskIOChart({ points, height = 180 }: { points: HistoryPoint[]; 
           key={`${label}-${index}`}
           x={52 + (index / Math.max(1, labels.length - 1)) * (width - 52)}
           y={height - 2}
-          fill="rgba(255,255,255,0.35)"
+          fill="var(--chart-label)"
           fontSize="10"
           textAnchor={index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle"}
         >
@@ -754,8 +733,8 @@ export function NetworkUsageChart({
         const y = padY + innerH - tick * innerH;
         return (
           <g key={tick}>
-            <line x1="52" y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.06)" />
-            <text x="0" y={y + 3} fill="rgba(255,255,255,0.35)" fontSize="10">
+            <line x1="52" y1={y} x2={width} y2={y} stroke="var(--chart-grid)" />
+            <text x="0" y={y + 3} fill="var(--chart-label)" fontSize="10">
               {tick === 0 ? "0" : formatRate(tick * max)}
             </text>
           </g>
@@ -787,13 +766,322 @@ export function NetworkUsageChart({
           key={`${label}-${index}`}
           x={52 + (index / Math.max(1, labels.length - 1)) * (width - 52)}
           y={height - 2}
-          fill="rgba(255,255,255,0.35)"
+          fill="var(--chart-label)"
           fontSize="10"
           textAnchor={index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle"}
         >
           {label}
         </text>
       ))}
+    </svg>
+  );
+}
+
+export type ServerLinePoint = {
+  t: number;
+  value: number | null;
+  detail?: string;
+};
+
+export type ServerLine = {
+  id: string;
+  label: string;
+  color: string;
+  points: ServerLinePoint[];
+};
+
+/** Same frame as the single-server chart: grid, time axis, crosshair, and tooltip. Each series is one server. */
+export function ServerLineChart({
+  series,
+  scale = "percent",
+}: {
+  series: ServerLine[];
+  scale?: "percent" | "rate";
+}) {
+  const width = 1000;
+  const plotH = 160;
+  const padL = scale === "rate" ? 64 : 44;
+  const padY = 8;
+  const innerW = width - padL;
+  const innerH = plotH - padY * 2;
+  const drawn = useMemo(
+    () =>
+      series.map((item) => ({
+        ...item,
+        samples: pickPoints(
+          item.points
+            .filter((point) => point.t > 0 && point.value != null && Number.isFinite(point.value))
+            .sort((a, b) => a.t - b.t),
+          120,
+        ),
+      })),
+    [series],
+  );
+  const guide = drawn.reduce<(typeof drawn)[number] | undefined>(
+    (best, item) => (!best || item.samples.length > best.samples.length ? item : best),
+    undefined,
+  );
+  const guideCount = guide?.samples.length ?? 0;
+  const peak = Math.max(
+    0,
+    ...drawn.flatMap((item) => item.samples.map((point) => point.value ?? 0)),
+  );
+  const max = scale === "percent" ? 100 : niceRateMax(Math.max(peak, 1));
+  const ticks =
+    scale === "percent" ? [0, 25, 50, 75, 100] : [0, max / 4, max / 2, (max * 3) / 4, max];
+  const labels = timeLabels((guide?.samples || []).map((point) => point.t));
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<{ index: number; x: number } | null>(null);
+
+  function onMove(event: PointerEvent<HTMLDivElement>) {
+    const rect = plotRef.current?.getBoundingClientRect();
+    if (!rect || guideCount === 0) return;
+    const cssX = Math.min(Math.max(0, event.clientX - rect.left), rect.width);
+    const vbX = (cssX / rect.width) * width;
+    const innerX = Math.min(Math.max(0, vbX - padL), innerW);
+    const index = indexAt(innerX, innerW, guideCount);
+    const x = padL + (guideCount === 1 ? 0 : (index / Math.max(1, guideCount - 1)) * innerW);
+    setHover({ index, x });
+  }
+
+  if (guideCount === 0) {
+    return (
+      <p className="px-4 pt-8 text-[12px] text-white/45">History appears as each server reports.</p>
+    );
+  }
+
+  return (
+    <div className="grid h-full min-w-0 grid-rows-[minmax(0,1fr)_1.35rem]">
+      <div className="relative min-h-0 min-w-0">
+        <div
+          ref={plotRef}
+          className="absolute inset-0 cursor-crosshair overflow-hidden"
+          onPointerMove={onMove}
+          onPointerLeave={() => setHover(null)}
+        >
+          <svg
+            viewBox={`0 0 ${width} ${plotH}`}
+            preserveAspectRatio="none"
+            className="h-full w-full"
+            role="img"
+            aria-label="Usage by server"
+          >
+            {ticks.map((tick) => {
+              const y = yAt(tick, max, padY, innerH);
+              return (
+                <line key={tick} x1={padL} y1={y} x2={width} y2={y} stroke="var(--chart-grid)" />
+              );
+            })}
+            {hover ? (
+              <line
+                x1={hover.x}
+                x2={hover.x}
+                y1={0}
+                y2={plotH}
+                stroke="var(--chart-guide)"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
+            ) : null}
+            {drawn.map((item) => {
+              const values = item.samples.map((point) => point.value ?? 0);
+              const coords = seriesCoords(values, innerW, plotH, max, padY).map((point) => ({
+                x: point.x + padL,
+                y: point.y,
+              }));
+              const d = smoothLine(coords);
+              if (!d) return null;
+              const knot = hover
+                ? coords[
+                    Math.round((hover.index / Math.max(1, guideCount - 1)) * (coords.length - 1))
+                  ]
+                : null;
+              return (
+                <g key={item.id}>
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  {knot ? (
+                    <circle
+                      cx={knot.x}
+                      cy={knot.y}
+                      r="3.5"
+                      fill={item.color}
+                      stroke="#0b1018"
+                      strokeWidth="1.25"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ) : null}
+                </g>
+              );
+            })}
+          </svg>
+          {hover ? (
+            <div
+              className="pointer-events-none absolute z-10 min-w-[168px] sui-glass-card rounded-xl px-2.5 py-2 text-[11px] shadow-lg"
+              style={{
+                left: `${(hover.x / width) * 100}%`,
+                top: 8,
+                transform:
+                  hover.x / width > 0.58 ? "translateX(calc(-100% - 10px))" : "translateX(10px)",
+              }}
+            >
+              <p className="mb-1.5 font-medium text-white/80">
+                {new Date(
+                  guide?.samples[hover.index]?.t || guide?.samples[0]?.t || 0,
+                ).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </p>
+              <ul className="space-y-1">
+                {drawn.map((item) => {
+                  const point =
+                    item.samples[
+                      Math.round(
+                        (hover.index / Math.max(1, guideCount - 1)) *
+                          Math.max(0, item.samples.length - 1),
+                      )
+                    ];
+                  return (
+                    <li key={item.id} className="flex items-center justify-between gap-4">
+                      <span className="flex min-w-0 items-center gap-1.5 text-white/55">
+                        <span
+                          className="size-1.5 shrink-0 rounded-full"
+                          style={{ background: item.color }}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-white/90">
+                        {point ? point.detail || formatLineValue(scale, point.value) : "—"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+        <div
+          className={`pointer-events-none absolute bottom-0 left-0 top-0 flex flex-col justify-between py-px pr-1 text-right text-[10px] tabular-nums text-white/40 ${
+            scale === "rate" ? "w-16" : "w-10"
+          }`}
+        >
+          {[...ticks].reverse().map((tick) => (
+            <span key={tick}>
+              {scale === "percent" ? `${Math.round(tick)}%` : formatRate(tick)}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div
+        className="flex items-start justify-between pt-1 text-[10px] leading-none text-white/35"
+        style={{ paddingLeft: `${(padL / width) * 100}%`, paddingRight: 4 }}
+      >
+        {labels.map((label, index) => (
+          <span key={`${label}-${index}`}>{label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function yAt(value: number, max: number, padY: number, innerH: number) {
+  const cap = Math.max(max, 1);
+  const capped = Math.max(0, Math.min(cap, value));
+  return padY + innerH - (capped / cap) * innerH;
+}
+
+function timeLabels(times: number[]) {
+  if (times.length === 0) return [];
+  const count = Math.min(5, times.length);
+  const out: string[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const index = Math.round((i / Math.max(1, count - 1)) * (times.length - 1));
+    out.push(
+      new Date(times[index]).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    );
+  }
+  return out;
+}
+
+function formatLineValue(scale: "percent" | "rate", value: number | null) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  if (scale === "rate") return formatRate(value);
+  return `${value.toFixed(1)}%`;
+}
+
+export function CompareChart({
+  series,
+  scale = "percent",
+}: {
+  series: { id: string; label: string; color: string; values: number[] }[];
+  scale?: "percent" | "rate";
+}) {
+  const width = 1000;
+  const height = 180;
+  const padL = 48;
+  const padY = 10;
+  const innerW = width - padL - 8;
+  const innerH = height - padY * 2;
+  const sampled = series.map((item) => ({
+    ...item,
+    values: downsampleAvg(item.values, CHART_BUCKETS),
+  }));
+  const peak = Math.max(1, ...sampled.flatMap((item) => item.values));
+  const max = scale === "percent" ? 100 : niceRateMax(peak);
+  const ticks = scale === "percent" ? [0, 50, 100] : [0, max / 2, max];
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="img">
+      {ticks.map((tick) => {
+        const y = padY + innerH - (tick / max) * innerH;
+        const label = scale === "percent" ? `${Math.round(tick)}%` : formatRate(tick);
+        return (
+          <g key={tick}>
+            <line
+              x1={padL}
+              x2={width - 8}
+              y1={y}
+              y2={y}
+              stroke="var(--chart-grid-strong)"
+              strokeWidth="1"
+            />
+            <text x={padL - 8} y={y + 3} fill="var(--chart-label)" fontSize="10" textAnchor="end">
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      {sampled.map((item) => {
+        const coords = seriesCoords(item.values, innerW, innerH, max, 0).map((point) => ({
+          x: point.x + padL,
+          y: point.y + padY,
+        }));
+        const d = smoothLine(coords);
+        if (!d) return null;
+        return (
+          <path
+            key={item.id}
+            d={d}
+            fill="none"
+            stroke={item.color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        );
+      })}
     </svg>
   );
 }

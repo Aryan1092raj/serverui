@@ -89,3 +89,21 @@ export async function apiRequest<T>(path: string, init?: RequestOptions): Promis
 
   return (await response.json()) as T;
 }
+
+/** Authenticated binary response, used for private server icons. */
+export async function apiBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  headers.set("Cache-Control", "no-store");
+  headers.set("Pragma", "no-cache");
+  const token = getInjectedDesktopConfig()?.localAuthToken?.trim();
+  if (token) headers.set(localAuthHeaderName(), token);
+  const response = await fetch(apiUrl(path), {
+    cache: "no-store",
+    credentials: "omit",
+    headers,
+  });
+  if (!response.ok) {
+    throw new ApiError(await readError(response), response.status);
+  }
+  return response.blob();
+}

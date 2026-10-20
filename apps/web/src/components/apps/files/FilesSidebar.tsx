@@ -1,16 +1,11 @@
 "use client";
 
-import {
-  Clock3,
-  HardDrive,
-  House,
-  Layers,
-  ScrollText,
-  Settings2,
-  type LucideIcon,
-} from "lucide-react";
-import { FILE_DROP_ATTR } from "@/src/components/apps/files/use-file-move-drag";
+import { Clock3, House, Layers, ScrollText, Settings2, type LucideIcon } from "lucide-react";
+import { ServerIcon } from "@/src/components/servers/ServerIcon";
+import { FILE_DROP_ATTR, SERVER_DROP_ATTR } from "@/src/components/apps/files/use-file-move-drag";
 import { TitlebarTrafficLights, useTitlebarProps } from "@/src/components/window/window-chrome";
+import { isSampleServer } from "@/src/lib/sample-servers";
+import type { Server } from "@/src/lib/servers";
 
 type Place = { label: string; path: string; icon: LucideIcon };
 
@@ -18,12 +13,16 @@ type Place = { label: string; path: string; icon: LucideIcon };
 export function FilesSidebar({
   path,
   homePath,
-  serverName,
+  servers,
+  activeId,
+  onSelectServer,
   onNavigate,
 }: {
   path: string;
   homePath: string;
-  serverName: string;
+  servers: Server[];
+  activeId: string;
+  onSelectServer: (id: string) => void;
   onNavigate: (path: string) => void;
 }) {
   const titlebar = useTitlebarProps();
@@ -34,7 +33,6 @@ export function FilesSidebar({
     { label: "var", path: "/var", icon: Layers },
     { label: "Logs", path: "/var/log", icon: ScrollText },
   ];
-  const locations: Place[] = [{ label: serverName, path: "/", icon: HardDrive }];
 
   return (
     <aside className="sui-finder-sidebar flex w-[200px] shrink-0 flex-col select-none">
@@ -42,8 +40,47 @@ export function FilesSidebar({
         <TitlebarTrafficLights />
       </div>
       <nav aria-label="Places" className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4">
+        <div className="mb-4">
+          <p className="text-[var(--finder-section)] px-2.5 pb-1 text-[11px] font-semibold tracking-wide uppercase">
+            Servers
+          </p>
+          {servers.length === 0 ? (
+            <p className="px-2.5 py-1 text-[12px] text-white/40">No connected servers</p>
+          ) : (
+            <ul className="space-y-px">
+              {servers.map((server) => {
+                const active = server.id === activeId;
+                return (
+                  <li key={server.id}>
+                    <button
+                      type="button"
+                      {...{ [SERVER_DROP_ATTR]: server.id }}
+                      aria-current={active ? "page" : undefined}
+                      data-active={active}
+                      title={
+                        isSampleServer(server.id)
+                          ? `${server.name} is preview data, so its files stay in this browser`
+                          : `Drop files to copy them to ${server.name}`
+                      }
+                      className="sui-finder-nav-item flex w-full items-center gap-2.5 rounded-[7px] px-2.5 py-[5px] text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                      onClick={() => onSelectServer(server.id)}
+                    >
+                      <ServerIcon
+                        iconId={server.iconId}
+                        customIcon={server.customIcon}
+                        serverId={server.id}
+                        updatedAt={server.updatedAt}
+                        size={16}
+                      />
+                      <span className="truncate">{server.name}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
         <Section title="Favorites" places={favorites} path={path} onNavigate={onNavigate} />
-        <Section title="Locations" places={locations} path={path} onNavigate={onNavigate} />
       </nav>
     </aside>
   );

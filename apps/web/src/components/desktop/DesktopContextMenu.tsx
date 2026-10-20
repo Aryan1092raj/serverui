@@ -6,16 +6,10 @@ type DesktopContextMenuProps = {
   x: number;
   y: number;
   onClose: () => void;
-  onComingSoon: () => void;
-  onLogOut: () => void;
+  onComingSoon?: () => void;
 };
 
-export function DesktopContextMenu({
-  x,
-  y,
-  onClose,
-  onLogOut,
-}: Omit<DesktopContextMenuProps, "onComingSoon"> & { onComingSoon?: () => void }) {
+export function DesktopContextMenu({ x, y, onClose }: DesktopContextMenuProps) {
   const { openWindow } = useWindowManager();
 
   return (
@@ -70,9 +64,9 @@ export function DesktopContextMenu({
       />
       <div className="my-1 h-px bg-black/8" />
       <MenuItem
-        label="Leave server"
+        label="Manage Servers"
         onSelect={() => {
-          onLogOut();
+          openWindow("servers");
           onClose();
         }}
       />

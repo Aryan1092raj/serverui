@@ -1,4 +1,5 @@
 export const APP_IDS = [
+  "servers",
   "dashboard",
   "files",
   "terminal",
@@ -37,6 +38,14 @@ export const APP_META: Record<
     unifiedTitlebar?: boolean;
   }
 > = {
+  servers: {
+    title: "Servers",
+    width: 1080,
+    height: 700,
+    available: true,
+    chrome: "light",
+    unifiedTitlebar: true,
+  },
   dashboard: {
     title: "System Monitor",
     width: 1120,

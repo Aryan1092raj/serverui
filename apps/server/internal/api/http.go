@@ -44,6 +44,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/servers/{id}/connect", s.connectServer)
 	mux.HandleFunc("POST /api/servers/{id}/disconnect", s.disconnectServer)
 	mux.HandleFunc("GET /api/servers/{id}/status", s.serverStatus)
+	mux.HandleFunc("GET /api/servers/{id}/icon", s.serverIcon)
 
 	mux.HandleFunc("GET /api/server", s.legacyServer)
 	mux.HandleFunc("GET /api/server/metrics", s.liveMetrics)
@@ -64,6 +65,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/files/rename", s.rename)
 	mux.HandleFunc("POST /api/files/copy", s.transfer(s.files.Copy))
 	mux.HandleFunc("POST /api/files/move", s.transfer(s.files.Move))
+	mux.HandleFunc("POST /api/files/transfer", s.transferAcross)
 	mux.HandleFunc("POST /api/files/compress", s.compress)
 	mux.HandleFunc("POST /api/files/upload", s.upload)
 	mux.HandleFunc("DELETE /api/files", s.deleteFile)
@@ -107,13 +109,15 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 }
 
 type serverBody struct {
-	Name       string `json:"name"`
-	Host       string `json:"host"`
-	Port       int    `json:"port"`
-	Username   string `json:"username"`
-	AuthType   string `json:"authType"`
-	Password   string `json:"password"`
-	PrivateKey string `json:"privateKey"`
+	Name       string  `json:"name"`
+	Host       string  `json:"host"`
+	Port       int     `json:"port"`
+	Username   string  `json:"username"`
+	AuthType   string  `json:"authType"`
+	Password   string  `json:"password"`
+	PrivateKey string  `json:"privateKey"`
+	IconID     string  `json:"iconId"`
+	IconImage  *string `json:"iconImage"`
 }
 
 func (b serverBody) input() servers.Input {
@@ -125,6 +129,8 @@ func (b serverBody) input() servers.Input {
 		AuthType:   b.AuthType,
 		Password:   b.Password,
 		PrivateKey: b.PrivateKey,
+		IconID:     b.IconID,
+		IconImage:  b.IconImage,
 	}
 }
 
@@ -152,6 +158,23 @@ func (s *Server) createServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, item)
+}
+
+func (s *Server) serverIcon(w http.ResponseWriter, r *http.Request) {
+	raw, contentType, err := s.servers.OpenIcon(r.Context(), r.PathValue("id"))
+	if err != nil {
+		if errors.Is(err, servers.ErrNotFound) {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "server icon not found"})
+		return
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(raw)
 }
 
 func (s *Server) getServer(w http.ResponseWriter, r *http.Request) {
@@ -356,10 +379,13 @@ func (s *Server) withMetrics(item servers.Public, wait bool) map[string]any {
 		"port":          item.Port,
 		"username":      item.Username,
 		"authType":      item.AuthType,
+		"iconId":        item.IconID,
+		"customIcon":    item.CustomIcon,
 		"cpuUsage":      0,
 		"memoryUsage":   0,
 		"diskUsage":     0,
 		"uptimeSeconds": 0,
+		"connected":     item.Connected,
 		"lastSeen":      item.LastSeen,
 		"createdAt":     item.CreatedAt,
 		"updatedAt":     item.UpdatedAt,
@@ -367,7 +393,12 @@ func (s *Server) withMetrics(item servers.Public, wait bool) map[string]any {
 	if item.Error != "" {
 		payload["error"] = item.Error
 	}
-	if item.Status != servers.StatusOnline {
+	// A saved "online" status is the last test result. Metrics dial only when
+	// this server already has a live pooled session.
+	if !item.Connected {
+		if item.Status == servers.StatusOnline {
+			payload["status"] = servers.StatusOffline
+		}
 		return payload
 	}
 	var snap metrics.Snapshot
@@ -654,6 +685,27 @@ func (s *Server) transfer(op transferFunc) http.HandlerFunc {
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}
+}
+
+func (s *Server) transferAcross(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		FromServerID string `json:"fromServerId"`
+		ToServerID   string `json:"toServerId"`
+		From         string `json:"from"`
+		ToDir        string `json:"toDir"`
+		ToName       string `json:"toName"`
+		Overwrite    bool   `json:"overwrite"`
+		RemoveSource bool   `json:"removeSource"`
+	}
+	if err := decodeJSON(w, r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+		return
+	}
+	if err := s.files.Transfer(r.Context(), body.FromServerID, body.ToServerID, body.From, body.ToDir, body.ToName, body.Overwrite, body.RemoveSource); err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) compress(w http.ResponseWriter, r *http.Request) {

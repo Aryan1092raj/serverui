@@ -98,6 +98,47 @@ func TestCreateGetDeleteDoesNotReturnSecrets(t *testing.T) {
 	}
 }
 
+func TestIconUpdateDoesNotReconnect(t *testing.T) {
+	svc := testService(t)
+	svc.SetIconDir(t.TempDir())
+	ctx := context.Background()
+	created, err := svc.Create(ctx, Input{
+		Name: "Lab", Host: "203.0.113.10", Port: 22, Username: "deploy",
+		AuthType: AuthPassword, Password: "secret",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.IconID != DefaultIconID || created.Status != StatusOnline {
+		t.Fatalf("created %+v", created)
+	}
+	dials := 0
+	svc.SetDialer(func(cfg sshx.Config, auth sshx.AuthMethod) error {
+		dials++
+		return fmt.Errorf("should not dial")
+	})
+	updated, err := svc.Update(ctx, created.ID, Input{
+		Name: "Lab", Host: "203.0.113.10", Port: 22, Username: "deploy",
+		AuthType: AuthPassword, IconID: "cloud",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dials != 0 || updated.Status != StatusOnline || updated.IconID != "cloud" {
+		t.Fatalf("dials %d status %s icon %s", dials, updated.Status, updated.IconID)
+	}
+	_, err = svc.Update(ctx, created.ID, Input{
+		Name: "Lab", Host: "203.0.113.11", Port: 22, Username: "deploy",
+		AuthType: AuthPassword, IconID: "cloud",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dials != 1 {
+		t.Fatalf("host change dials %d", dials)
+	}
+}
+
 func TestCredentialIsolation(t *testing.T) {
 	svc := testService(t)
 	ctx := context.Background()

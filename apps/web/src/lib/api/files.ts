@@ -23,6 +23,7 @@ export type FileContent = {
   truncated?: boolean;
   mime?: string;
   binary?: boolean;
+  writable?: boolean;
 };
 
 function fileQuery(serverId: string, extra: Record<string, string>) {
@@ -41,6 +42,8 @@ export function writeFile(serverId: string, path: string, content: string) {
   return apiRequest<{ status: string }>("/api/files/write", {
     method: "POST",
     body: JSON.stringify({ serverId, path, content }),
+    // The default 5s is too short to upload a few MB over a slow link.
+    timeoutMs: 60_000,
   });
 }
 
@@ -89,6 +92,31 @@ export function copyItem(serverId: string, from: string, to: string, overwrite =
   return apiRequest<{ status: string }>("/api/files/copy", {
     method: "POST",
     body: JSON.stringify({ serverId, from, to, overwrite }),
+    timeoutMs: LONG_OPERATION_MS,
+  });
+}
+
+/** Copies a file or folder from one connected server into a directory on another. */
+export function transferItem(
+  fromServerId: string,
+  toServerId: string,
+  from: string,
+  toDir: string,
+  overwrite = false,
+  removeSource = false,
+  toName = "",
+) {
+  return apiRequest<{ status: string }>("/api/files/transfer", {
+    method: "POST",
+    body: JSON.stringify({
+      fromServerId,
+      toServerId,
+      from,
+      toDir,
+      overwrite,
+      removeSource,
+      toName,
+    }),
     timeoutMs: LONG_OPERATION_MS,
   });
 }

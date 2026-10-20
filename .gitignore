@@ -92,3 +92,6 @@ apps/desktop/src-tauri/gen/
 # Logs
 *.log
 logs/
+
+production/
+docs

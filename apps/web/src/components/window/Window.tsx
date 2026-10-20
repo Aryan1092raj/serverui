@@ -8,9 +8,9 @@ import {
   WindowChromeProvider,
   type WindowChromeValue,
 } from "@/src/components/window/window-chrome";
-import { useServer } from "@/src/lib/api/server-context";
-import { useSelectedServer } from "@/src/lib/session";
+import { ServerIcon } from "@/src/components/servers/ServerIcon";
 import { useTheme } from "@/src/lib/theme";
+import { useSession } from "@/src/lib/session";
 import { useWindowManager, type WindowState } from "@/src/components/window/window-context";
 // Genie minimize/restore is paused for now.
 // import {
@@ -34,8 +34,6 @@ export function Window({ window: win, children }: { window: WindowState; childre
     updateWindowPosition,
     updateWindowSize,
   } = useWindowManager();
-  const { server } = useServer();
-  const selected = useSelectedServer();
   const { theme } = useTheme();
   const nodeRef = useRef<HTMLElement>(null);
   const drag = useRef<{
@@ -57,10 +55,9 @@ export function Window({ window: win, children }: { window: WindowState; childre
   const light = chrome === "light" && theme === "light";
   // Unified apps (Files) draw their own traffic lights and drag region.
   const unified = APP_META[win.app].unifiedTitlebar === true;
-  const title =
-    win.app === "terminal"
-      ? `Terminal — ${selected?.hostname || selected?.address || server?.hostname || server?.host || "server"}`
-      : win.title;
+  const title = win.title;
+  const { servers } = useSession();
+  const bound = win.serverId ? servers.find((item) => item.id === win.serverId) : undefined;
 
   // Genie minimize/restore is paused; hide instantly for now.
   // import {
@@ -204,6 +201,17 @@ export function Window({ window: win, children }: { window: WindowState; childre
       {unified ? null : (
         <WindowHeader
           title={title}
+          icon={
+            bound ? (
+              <ServerIcon
+                iconId={bound.iconId}
+                customIcon={bound.customIcon}
+                serverId={bound.id}
+                updatedAt={bound.updatedAt}
+                size={16}
+              />
+            ) : null
+          }
           focused={focused}
           chrome={light ? "light" : "dark"}
           maximized={win.maximized}

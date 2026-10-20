@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Server } from "@/src/lib/servers";
 import { BrandMark } from "@/src/components/brand/BrandMark";
+import { ServerIcon } from "@/src/components/servers/ServerIcon";
 import { WallpaperBackdrop } from "@/src/lib/wallpaper";
 
 type LogoutScreenProps = {
@@ -68,7 +69,16 @@ export function LogoutScreen({ server, onComplete }: LogoutScreenProps) {
           withWordmark
           wordmarkClassName="text-[12px] font-medium uppercase tracking-[0.28em] text-white/45"
         />
-        <h1 className="mt-5 text-[28px] font-semibold tracking-tight text-white">Logging off</h1>
+        <span className="mt-5 flex size-11 items-center justify-center">
+          <ServerIcon
+            iconId={server.iconId}
+            customIcon={server.customIcon}
+            serverId={server.id}
+            updatedAt={server.updatedAt}
+            size={40}
+          />
+        </span>
+        <h1 className="mt-4 text-[28px] font-semibold tracking-tight text-white">Logging off</h1>
         <p className="mt-3 text-[15px] text-white/78">{server.name}</p>
         <p className="font-mono text-[12px] text-white/45">
           {server.hostname}

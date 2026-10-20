@@ -14,6 +14,8 @@ import { getFileType } from "@/src/lib/files/file-type";
 import { desktopBounds, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH } from "@/src/lib/desktop";
 
 export type WindowPayload = {
+  serverId?: string;
+  serverName?: string;
   filePath?: string;
   fileName?: string;
   fileSize?: number;
@@ -35,6 +37,7 @@ export type WindowState = {
   minimized: boolean;
   maximized: boolean;
   zIndex: number;
+  serverId?: string;
   payload?: WindowPayload;
   chrome?: WindowChrome;
   restoreBounds?: {
@@ -117,6 +120,7 @@ function reducer(state: ManagerState, action: Action): ManagerState {
                   ...item,
                   minimized: false,
                   zIndex,
+                  serverId: (action.payload ?? item.payload)?.serverId,
                   payload: action.payload ?? item.payload,
                   title: windowTitle(action.app, action.payload ?? item.payload),
                   chrome: windowChrome(action.app, action.payload ?? item.payload),
@@ -144,6 +148,7 @@ function reducer(state: ManagerState, action: Action): ManagerState {
         minimized: false,
         maximized: false,
         zIndex,
+        serverId: action.payload?.serverId,
         payload: action.payload,
         chrome: windowChrome(action.app, action.payload),
       };
@@ -234,7 +239,11 @@ function reducer(state: ManagerState, action: Action): ManagerState {
       };
     }
     case "toggle-dock": {
-      const existing = state.windows.find((item) => item.app === action.app);
+      const matches = state.windows.filter((item) => item.app === action.app);
+      const existing = matches.reduce<WindowState | undefined>((top, item) => {
+        if (!top || item.zIndex > top.zIndex) return item;
+        return top;
+      }, undefined);
       if (!existing) {
         return reducer(state, { type: "open", app: action.app });
       }
@@ -316,6 +325,8 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "open", app, payload });
   }, []);
   const closeWindow = useCallback((id: string) => {
+    if (closeGuards.get(id)?.() === false) return;
+    closeGuards.delete(id);
     dispatch({ type: "close", id });
   }, []);
   const minimizeWindow = useCallback((id: string) => {
@@ -388,18 +399,43 @@ export function useWindowManager() {
   return context;
 }
 
+// A window can veto its own close (an editor with unsaved changes). The guard returns false to keep it open.
+const closeGuards = new Map<string, () => boolean>();
+
+export function setCloseGuard(id: string, guard: (() => boolean) | null) {
+  if (guard) closeGuards.set(id, guard);
+  else closeGuards.delete(id);
+}
+
+export function editorWindowId(filePath: string, serverId?: string) {
+  return serverId ? `editor:${serverId}:${filePath}` : `editor:${filePath}`;
+}
+
+export function createWindowId(app: AppId, payload?: WindowPayload) {
+  return windowId(app, payload);
+}
+
 function windowId(app: AppId, payload?: WindowPayload) {
+  const serverId = payload?.serverId;
+  if (app === "editor" && payload?.filePath) return editorWindowId(payload.filePath, serverId);
   if (app === "viewer" && payload?.filePath) {
-    if (payload.infoOnly || payload.isDirectory) {
-      return `viewer:info:${payload.filePath}`;
-    }
-    return `viewer:${payload.filePath}`;
+    const kind = payload.infoOnly || payload.isDirectory ? "info" : "file";
+    return serverId
+      ? `viewer:${serverId}:${kind}:${payload.filePath}`
+      : `viewer:${kind}:${payload.filePath}`;
+  }
+  if ((app === "files" || app === "dashboard") && serverId) {
+    return `${app}:${serverId}`;
   }
   return app;
 }
 
 function windowTitle(app: AppId, payload?: WindowPayload) {
-  if (app === "viewer") {
+  const name = payload?.serverName;
+  if (app === "files") return name ? `Files — ${name}` : "Files";
+  if (app === "terminal") return "Terminal";
+  if (app === "dashboard") return name ? `System Monitor — ${name}` : "System Monitor";
+  if (app === "viewer" || (app === "editor" && payload?.filePath)) {
     return payload?.fileName || payload?.filePath?.split("/").filter(Boolean).pop() || "Viewer";
   }
   return APP_META[app].title;

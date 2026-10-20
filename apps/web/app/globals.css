@@ -53,6 +53,11 @@ html[data-theme="dark"] {
   --dock-glass-hover: rgba(80, 80, 86, 0.38);
   --dock-border: rgba(255, 255, 255, 0.16);
   --traffic-idle: #4c4c51;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --chart-grid-strong: rgba(255, 255, 255, 0.08);
+  --chart-guide: rgba(255, 255, 255, 0.4);
+  --chart-label: rgba(255, 255, 255, 0.35);
+  --chart-label-strong: rgba(255, 255, 255, 0.45);
   --desktop-scrim: linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.22),
@@ -96,7 +101,7 @@ html[data-theme="light"] {
   --finder-hairline: #e3e3e5;
   --finder-text: #1d1d1f;
   --finder-muted: #6e6e73;
-  --finder-section: #a1a1a6;
+  --finder-section: #6e6e73;
   --finder-nav-hover: rgba(0, 0, 0, 0.04);
   --finder-nav-active: rgba(0, 0, 0, 0.08);
   --finder-tile-selected: rgba(0, 0, 0, 0.06);
@@ -112,6 +117,11 @@ html[data-theme="light"] {
   --dock-glass-hover: rgba(255, 255, 255, 0.26);
   --dock-border: rgba(255, 255, 255, 0.38);
   --traffic-idle: #d1d1d6;
+  --chart-grid: rgba(0, 0, 0, 0.08);
+  --chart-grid-strong: rgba(0, 0, 0, 0.12);
+  --chart-guide: rgba(0, 0, 0, 0.28);
+  --chart-label: rgba(0, 0, 0, 0.45);
+  --chart-label-strong: rgba(0, 0, 0, 0.55);
   --desktop-scrim: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0.18),
@@ -335,24 +345,57 @@ body {
   animation: desktop-in 220ms ease-out;
 }
 
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sheet-in {
+  animation: sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.animate-pane-in {
+  animation: pane-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
 .sui-server-input {
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--finder-control-border);
+  background: var(--finder-search);
+  padding: 0.45rem 0.7rem;
   font-size: 13px;
-  color: #fff;
+  color: var(--finder-text);
   outline: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .sui-server-input::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+  color: var(--finder-muted);
 }
 
 .sui-server-input:focus {
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+  border-color: var(--finder-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--finder-accent) 25%, transparent);
 }
 
 .sui-server-input[aria-invalid="true"] {
@@ -814,6 +857,14 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .animate-sheet-in,
+  .animate-pane-in,
+  .animate-modal-in,
+  .animate-menu-in,
+  .animate-card-in {
+    animation: none;
+  }
+
   .sui-dock-bounce,
   .sui-dock-badge {
     animation: none;
@@ -1079,4 +1130,677 @@ body {
   outline: none;
   ring: 2px;
   ring-offset: 1px;
+}
+
+/* Light windows keep the same utilities, but white ink becomes dark ink.
+   The terminal resets these so its shell stays light on black. */
+html[data-theme="light"] .sui-window-glass .text-white\/25,
+html[data-theme="light"] .sui-menu .text-white\/25 {
+  color: color-mix(in srgb, var(--app-fg) 25%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/28,
+html[data-theme="light"] .sui-menu .text-white\/28 {
+  color: color-mix(in srgb, var(--app-fg) 28%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/30,
+html[data-theme="light"] .sui-menu .text-white\/30 {
+  color: color-mix(in srgb, var(--app-fg) 30%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/35,
+html[data-theme="light"] .sui-menu .text-white\/35 {
+  color: color-mix(in srgb, var(--app-fg) 35%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/40,
+html[data-theme="light"] .sui-menu .text-white\/40 {
+  color: color-mix(in srgb, var(--app-fg) 40%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/42,
+html[data-theme="light"] .sui-menu .text-white\/42 {
+  color: color-mix(in srgb, var(--app-fg) 42%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/45,
+html[data-theme="light"] .sui-menu .text-white\/45 {
+  color: color-mix(in srgb, var(--app-fg) 45%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/48,
+html[data-theme="light"] .sui-menu .text-white\/48 {
+  color: color-mix(in srgb, var(--app-fg) 48%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/50,
+html[data-theme="light"] .sui-menu .text-white\/50 {
+  color: color-mix(in srgb, var(--app-fg) 50%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/55,
+html[data-theme="light"] .sui-menu .text-white\/55 {
+  color: color-mix(in srgb, var(--app-fg) 55%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/58,
+html[data-theme="light"] .sui-menu .text-white\/58 {
+  color: color-mix(in srgb, var(--app-fg) 58%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/60,
+html[data-theme="light"] .sui-menu .text-white\/60 {
+  color: color-mix(in srgb, var(--app-fg) 60%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/62,
+html[data-theme="light"] .sui-menu .text-white\/62 {
+  color: color-mix(in srgb, var(--app-fg) 62%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/70,
+html[data-theme="light"] .sui-menu .text-white\/70 {
+  color: color-mix(in srgb, var(--app-fg) 70%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/75,
+html[data-theme="light"] .sui-menu .text-white\/75 {
+  color: color-mix(in srgb, var(--app-fg) 75%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/78,
+html[data-theme="light"] .sui-menu .text-white\/78 {
+  color: color-mix(in srgb, var(--app-fg) 78%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/80,
+html[data-theme="light"] .sui-menu .text-white\/80 {
+  color: color-mix(in srgb, var(--app-fg) 80%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/85,
+html[data-theme="light"] .sui-menu .text-white\/85 {
+  color: color-mix(in srgb, var(--app-fg) 85%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white\/90,
+html[data-theme="light"] .sui-menu .text-white\/90 {
+  color: color-mix(in srgb, var(--app-fg) 90%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .text-white,
+html[data-theme="light"] .sui-menu .text-white,
+html[data-theme="light"] .sui-window-glass .hover\:text-white:hover,
+html[data-theme="light"] .sui-menu .hover\:text-white:hover {
+  color: var(--app-fg);
+}
+html[data-theme="light"]
+  .sui-window-glass
+  :is(
+    .bg-\[\#2b7fff\],
+    .bg-red-500,
+    .bg-red-600,
+    .bg-red-700,
+    .bg-black\/80,
+    .bg-\[var\(--finder-accent\)\]
+  ),
+html[data-theme="light"] .sui-window-glass button[style*="background"],
+html[data-theme="light"]
+  .sui-menu
+  :is(.hover\:bg-sky-500:hover, .focus-visible\:bg-sky-500:focus-visible),
+html[data-theme="light"]
+  .sui-window-glass
+  :is(
+    .enabled\:hover\:bg-\[var\(--finder-accent\)\]:hover,
+    .focus-visible\:bg-\[var\(--finder-accent\)\]:focus-visible
+  ) {
+  color: #fff;
+}
+
+html[data-theme="light"] .sui-window-glass .bg-white\/4,
+html[data-theme="light"] .sui-menu .bg-white\/4 {
+  background-color: color-mix(in srgb, var(--app-fg) 4%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/5,
+html[data-theme="light"] .sui-menu .bg-white\/5 {
+  background-color: color-mix(in srgb, var(--app-fg) 5%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/6,
+html[data-theme="light"] .sui-menu .bg-white\/6 {
+  background-color: color-mix(in srgb, var(--app-fg) 6%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/8,
+html[data-theme="light"] .sui-menu .bg-white\/8 {
+  background-color: color-mix(in srgb, var(--app-fg) 8%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/10,
+html[data-theme="light"] .sui-menu .bg-white\/10 {
+  background-color: color-mix(in srgb, var(--app-fg) 8%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/12,
+html[data-theme="light"] .sui-menu .bg-white\/12 {
+  background-color: color-mix(in srgb, var(--app-fg) 8%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/14,
+html[data-theme="light"] .sui-menu .bg-white\/14 {
+  background-color: color-mix(in srgb, var(--app-fg) 10%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/15,
+html[data-theme="light"] .sui-menu .bg-white\/15 {
+  background-color: color-mix(in srgb, var(--app-fg) 10%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/16,
+html[data-theme="light"] .sui-menu .bg-white\/16 {
+  background-color: color-mix(in srgb, var(--app-fg) 10%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/18,
+html[data-theme="light"] .sui-menu .bg-white\/18 {
+  background-color: color-mix(in srgb, var(--app-fg) 12%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/20,
+html[data-theme="light"] .sui-menu .bg-white\/20 {
+  background-color: color-mix(in srgb, var(--app-fg) 12%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .bg-white\/25,
+html[data-theme="light"] .sui-menu .bg-white\/25 {
+  background-color: color-mix(in srgb, var(--app-fg) 14%, transparent);
+}
+
+html[data-theme="light"] .sui-window-glass .border-white\/6,
+html[data-theme="light"] .sui-menu .border-white\/6 {
+  border-color: color-mix(in srgb, var(--app-fg) 8%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/8,
+html[data-theme="light"] .sui-menu .border-white\/8 {
+  border-color: color-mix(in srgb, var(--app-fg) 10%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/10,
+html[data-theme="light"] .sui-menu .border-white\/10 {
+  border-color: color-mix(in srgb, var(--app-fg) 12%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/15,
+html[data-theme="light"] .sui-menu .border-white\/15 {
+  border-color: color-mix(in srgb, var(--app-fg) 16%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/18,
+html[data-theme="light"] .sui-menu .border-white\/18 {
+  border-color: color-mix(in srgb, var(--app-fg) 18%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/20,
+html[data-theme="light"] .sui-menu .border-white\/20 {
+  border-color: color-mix(in srgb, var(--app-fg) 20%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/30,
+html[data-theme="light"] .sui-menu .border-white\/30 {
+  border-color: color-mix(in srgb, var(--app-fg) 28%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/35,
+html[data-theme="light"] .sui-menu .border-white\/35 {
+  border-color: color-mix(in srgb, var(--app-fg) 32%, transparent);
+}
+html[data-theme="light"] .sui-window-glass .border-white\/40,
+html[data-theme="light"] .sui-menu .border-white\/40 {
+  border-color: color-mix(in srgb, var(--app-fg) 36%, transparent);
+}
+
+html[data-theme="light"] .sui-terminal .text-white\/25 {
+  color: rgb(255 255 255 / 0.25);
+}
+html[data-theme="light"] .sui-terminal .text-white\/28 {
+  color: rgb(255 255 255 / 0.28);
+}
+html[data-theme="light"] .sui-terminal .text-white\/30 {
+  color: rgb(255 255 255 / 0.3);
+}
+html[data-theme="light"] .sui-terminal .text-white\/35 {
+  color: rgb(255 255 255 / 0.35);
+}
+html[data-theme="light"] .sui-terminal .text-white\/40 {
+  color: rgb(255 255 255 / 0.4);
+}
+html[data-theme="light"] .sui-terminal .text-white\/45 {
+  color: rgb(255 255 255 / 0.45);
+}
+html[data-theme="light"] .sui-terminal .text-white\/50 {
+  color: rgb(255 255 255 / 0.5);
+}
+html[data-theme="light"] .sui-terminal .text-white\/55 {
+  color: rgb(255 255 255 / 0.55);
+}
+html[data-theme="light"] .sui-terminal .text-white\/60 {
+  color: rgb(255 255 255 / 0.6);
+}
+html[data-theme="light"] .sui-terminal .text-white\/70 {
+  color: rgb(255 255 255 / 0.7);
+}
+html[data-theme="light"] .sui-terminal .text-white\/80 {
+  color: rgb(255 255 255 / 0.8);
+}
+html[data-theme="light"] .sui-terminal .text-white\/85 {
+  color: rgb(255 255 255 / 0.85);
+}
+html[data-theme="light"] .sui-terminal .text-white\/90 {
+  color: rgb(255 255 255 / 0.9);
+}
+html[data-theme="light"] .sui-terminal .text-white {
+  color: #fff;
+}
+html[data-theme="light"] .sui-terminal .bg-white\/10 {
+  background-color: rgb(255 255 255 / 0.1);
+}
+html[data-theme="light"] .sui-terminal .border-white\/10 {
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+/* Aura keeps its own palette. Light and dark still switch the surfaces. */
+html[data-appearance="aura"] {
+  color-scheme: dark;
+  --background: #141218;
+  --foreground: #e6e0e9;
+  --shell-accent: #d0bcff;
+  --shell-primary: var(--shell-accent);
+  --shell-on-primary: #291b41;
+  --shell-radius: 18px;
+  --shell-blur: 14px;
+  --shell-opacity: 94%;
+  --shell-surface: color-mix(in srgb, var(--shell-accent) 8%, var(--background));
+  --shell-surface-2: color-mix(in srgb, var(--shell-accent) 15%, var(--background));
+  --shell-container: color-mix(in srgb, var(--shell-accent) 30%, var(--background));
+  --shell-muted: color-mix(in srgb, var(--foreground) 65%, var(--background));
+  --shell-outline: color-mix(in srgb, var(--foreground) 14%, transparent);
+  --app-bg: var(--shell-surface);
+  --app-bg-2: var(--shell-surface-2);
+  --app-sidebar: var(--shell-surface);
+  --app-fg: var(--foreground);
+  --app-title: var(--foreground);
+  --app-muted: var(--shell-muted);
+  --app-card: var(--shell-surface-2);
+  --app-input: var(--shell-surface-2);
+  --app-border: var(--shell-outline);
+  --app-hover: var(--shell-container);
+  --app-selected: var(--shell-container);
+  --window-bg: color-mix(in srgb, var(--shell-surface) var(--shell-opacity), transparent);
+  --window-header: var(--shell-surface-2);
+  --window-header-inactive: var(--shell-surface);
+  --window-title: var(--foreground);
+  --window-border: var(--shell-outline);
+  --menu-bg: var(--shell-surface);
+  --menu-fg: var(--foreground);
+  --menu-border: var(--shell-outline);
+  --topbar-bg: var(--shell-surface);
+  --topbar-fg: var(--foreground);
+  --topbar-muted: var(--shell-muted);
+  --toggle-bg: var(--shell-surface-2);
+  --toggle-active: var(--shell-primary);
+  --toggle-active-fg: var(--shell-on-primary);
+  --finder-sidebar: var(--shell-surface);
+  --finder-toolbar: var(--shell-surface-2);
+  --finder-content: color-mix(in srgb, var(--shell-surface) 88%, var(--background));
+  --finder-hairline: var(--shell-outline);
+  --finder-text: var(--foreground);
+  --finder-muted: var(--shell-muted);
+  --finder-nav-hover: var(--shell-container);
+  --finder-nav-active: var(--shell-container);
+  --finder-tile-selected: var(--shell-container);
+  --finder-control: var(--shell-surface-2);
+  --finder-control-border: var(--shell-outline);
+  --finder-accent: var(--shell-primary);
+}
+
+html[data-appearance="aura"][data-theme="light"] {
+  color-scheme: light;
+  --background: #f7f2fa;
+  --foreground: #24202a;
+  --shell-primary: color-mix(in srgb, var(--shell-accent) 48%, #251236);
+  --shell-on-primary: #fff;
+  --finder-section: color-mix(in srgb, var(--foreground) 58%, var(--background));
+}
+
+html[data-appearance="aura"] .sui-window-glass {
+  border-radius: calc(var(--shell-radius) * 1.2);
+  background: var(--window-bg);
+  border-color: var(--window-border);
+  backdrop-filter: blur(var(--shell-blur));
+}
+
+.shell-desktop {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  height: 100dvh;
+  padding: 10px;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+}
+.shell-desktop[data-right="true"] {
+  flex-direction: row-reverse;
+}
+.shell-rail {
+  width: 46px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 45;
+}
+.shell-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--shell-surface-2);
+}
+.shell-apps {
+  max-height: 42vh;
+  overflow: auto;
+  scrollbar-width: none;
+}
+.shell-icon {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--foreground);
+}
+.shell-icon:hover,
+.shell-app-icon[aria-current="page"] {
+  background: var(--shell-container);
+  color: var(--shell-primary);
+}
+html[data-appearance="aura"][data-theme="dark"] .shell-icon:hover,
+html[data-appearance="aura"][data-theme="dark"] .shell-app-icon[aria-current="page"] {
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  color: var(--foreground);
+}
+.shell-running {
+  position: absolute;
+  left: 1px;
+  top: 17px;
+  height: 4px;
+  width: 4px;
+  border-radius: 50%;
+  background: var(--shell-primary);
+}
+.shell-badge {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border-radius: 9px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  background: #f2b8b5;
+  color: #601410;
+  font-size: 10px;
+}
+.shell-rail-spacer {
+  flex: 1;
+  min-height: 0;
+}
+.shell-active-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--shell-muted);
+}
+.shell-rail-metrics {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+}
+.shell-ring {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--shell-primary) calc(var(--value, 0) * 1%),
+    var(--shell-surface-2) 0
+  );
+}
+.shell-ring::before {
+  position: absolute;
+  content: "";
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--background);
+}
+.shell-ring svg {
+  position: relative;
+  color: var(--shell-muted);
+}
+.shell-clock {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 500;
+  max-width: 42px;
+  padding: 4px 2px;
+  border-radius: 12px;
+}
+.shell-clock time span {
+  display: block;
+}
+.shell-connection {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  right: 4px;
+  bottom: 5px;
+  border-radius: 50%;
+  background: #f2b8b5;
+}
+.shell-connection[data-online="true"] {
+  background: #a8dab5;
+}
+.shell-screen {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: calc(var(--shell-radius) * 1.4);
+  background:
+    radial-gradient(
+      70% 80% at 15% 0,
+      color-mix(in srgb, var(--shell-primary) 34%, var(--background)),
+      transparent 70%
+    ),
+    var(--shell-surface);
+}
+.shell-hero,
+.shell-desktop-caption,
+.shell-desktop-clock {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  text-shadow: 0 1px 16px color-mix(in srgb, var(--background) 80%, transparent);
+}
+.shell-hero {
+  top: 22px;
+  left: 24px;
+}
+.shell-hero h1 {
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.1;
+  margin: 14px 0 6px;
+}
+.shell-hero p,
+.shell-desktop-caption {
+  color: var(--shell-muted);
+  font-size: 13px;
+}
+.shell-desktop-caption {
+  bottom: 20px;
+  left: 24px;
+}
+.shell-desktop-clock {
+  bottom: 14px;
+  right: 26px;
+  font-size: 68px;
+  opacity: 0.4;
+  font-weight: 500;
+}
+.shell-workspace {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.shell-panel-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+}
+.shell-panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(100% - 40px);
+  overflow: auto;
+  border: 1px solid var(--shell-outline);
+  border-radius: calc(var(--shell-radius) * 1.2);
+  padding: 20px;
+  background: var(--window-bg);
+  color: var(--foreground);
+  box-shadow: 0 16px 48px #0006;
+  backdrop-filter: blur(var(--shell-blur));
+}
+.shell-panel-launcher {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(540px, calc(100% - 100px));
+}
+.shell-panel-settings {
+  right: 20px;
+  top: 20px;
+  bottom: 20px;
+  width: min(370px, calc(100% - 100px));
+}
+.shell-desktop[data-right="true"] .shell-panel-settings {
+  right: auto;
+  left: 20px;
+}
+.shell-panel-title h2 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.shell-launcher-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+}
+.shell-list-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--shell-radius);
+  background: transparent;
+  color: inherit;
+}
+.shell-list-item:hover {
+  background: var(--shell-container);
+}
+.shell-section-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--shell-muted);
+}
+.shell-appearance {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--app-fg, inherit);
+}
+.shell-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.shell-tiles button {
+  min-height: 56px;
+  border: 0;
+  border-radius: var(--shell-radius);
+  padding: 8px 4px;
+  background: var(--shell-container);
+  color: var(--foreground);
+  font-size: 12px;
+}
+.shell-tiles button[aria-pressed="true"] {
+  background: var(--shell-primary);
+  color: var(--shell-on-primary);
+}
+.shell-swatches {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.shell-swatches button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--shell-surface-2);
+  border: 1px solid transparent;
+  color: var(--foreground);
+}
+.shell-swatches button[aria-pressed="true"] {
+  border-color: var(--shell-primary);
+}
+.shell-swatches span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.shell-appearance label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.shell-appearance label input {
+  margin-left: auto;
+  max-width: 50%;
+  accent-color: var(--shell-primary);
+}
+.shell-appearance output {
+  min-width: 34px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--shell-muted);
+}
+.shell-appearance input[type="color"] {
+  width: 44px;
+  height: 28px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+}
+.shell-apps[data-autohide="true"] {
+  opacity: 0.12;
+}
+.shell-rail:hover .shell-apps,
+.shell-apps:focus-within {
+  opacity: 1;
+}
+html[data-compact="true"] .shell-panel {
+  padding: 14px;
+  gap: 10px;
+}
+html[data-motion="reduced"] .shell-panel {
+  backdrop-filter: none;
 }

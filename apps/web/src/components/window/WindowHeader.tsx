@@ -5,6 +5,7 @@ import type { WindowChrome } from "@/src/data/apps";
 
 type WindowHeaderProps = {
   title: string;
+  icon?: ReactNode;
   focused: boolean;
   chrome: WindowChrome;
   maximized: boolean;
@@ -17,6 +18,7 @@ type WindowHeaderProps = {
 
 export function WindowHeader({
   title,
+  icon,
   focused,
   chrome,
   maximized,
@@ -44,11 +46,12 @@ export function WindowHeader({
         onClose={onClose}
       />
       <h2
-        className={`pointer-events-none absolute inset-x-16 truncate text-center text-[13px] font-medium ${
+        className={`pointer-events-none absolute inset-x-16 flex items-center justify-center gap-1.5 truncate text-center text-[13px] font-medium ${
           light ? "text-[var(--window-title)]" : "text-white/80"
         }`}
       >
-        {title}
+        {icon}
+        <span className="truncate">{title}</span>
       </h2>
     </header>
   );

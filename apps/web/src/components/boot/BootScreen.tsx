@@ -6,6 +6,7 @@ import { connectServer } from "@/src/lib/api/server";
 import { friendlyError } from "@/src/lib/errors";
 import { useSession } from "@/src/lib/session";
 import { BrandMark } from "@/src/components/brand/BrandMark";
+import { ServerIcon } from "@/src/components/servers/ServerIcon";
 import { WallpaperBackdrop } from "@/src/lib/wallpaper";
 
 type BootScreenProps = {
@@ -90,7 +91,16 @@ export function BootScreen({ server, onComplete }: BootScreenProps) {
           withWordmark
           wordmarkClassName="text-[12px] font-medium uppercase tracking-[0.28em] text-white/45"
         />
-        <h1 className="mt-5 text-[28px] font-semibold tracking-tight text-white">{errorTitle}</h1>
+        <span className="mt-5 flex size-11 items-center justify-center">
+          <ServerIcon
+            iconId={server.iconId}
+            customIcon={server.customIcon}
+            serverId={server.id}
+            updatedAt={server.updatedAt}
+            size={40}
+          />
+        </span>
+        <h1 className="mt-4 text-[28px] font-semibold tracking-tight text-white">{errorTitle}</h1>
         <p className="mt-2 max-w-md text-[14px] leading-6 text-white/62">
           ServerUI couldn&apos;t connect to {server.name}.{" "}
           {error || "Try again or edit the server."}
@@ -128,7 +138,16 @@ export function BootScreen({ server, onComplete }: BootScreenProps) {
         withWordmark
         wordmarkClassName="text-[12px] font-medium uppercase tracking-[0.28em] text-white/45"
       />
-      <h1 className="mt-5 text-[28px] font-semibold tracking-tight text-white">
+      <span className="mt-5 flex size-11 items-center justify-center">
+        <ServerIcon
+          iconId={server.iconId}
+          customIcon={server.customIcon}
+          serverId={server.id}
+          updatedAt={server.updatedAt}
+          size={40}
+        />
+      </span>
+      <h1 className="mt-4 text-[28px] font-semibold tracking-tight text-white">
         Connecting to {server.name}
       </h1>
       <p className="mt-3 text-[15px] text-white/78">{server.name}</p>

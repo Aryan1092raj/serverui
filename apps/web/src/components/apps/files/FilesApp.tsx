@@ -25,6 +25,7 @@ import {
   resolveExtract,
   startExtract,
   suggestUniqueName,
+  transferItem,
   uploadFile,
   type ArchiveFormat,
   type ConflictPolicy,
@@ -33,9 +34,10 @@ import {
 } from "@/src/lib/api/files";
 import { useWindowManager, type WindowPayload } from "@/src/components/window/window-context";
 import { addDesktopShortcut } from "@/src/lib/desktop-shortcuts";
-import { useServer } from "@/src/lib/api/server-context";
-import { useSelectedServer } from "@/src/lib/session";
+import { useOptionalServer } from "@/src/lib/api/server-context";
+import { useSelectedServer, useSession } from "@/src/lib/session";
 import { formatSize, totalSize } from "@/src/lib/files/format";
+import { getFileViewer } from "@/src/lib/files/file-type";
 import { Breadcrumbs } from "@/src/components/apps/files/Breadcrumbs";
 import { DownloadPanel, useDownloadQueue } from "@/src/components/apps/files/DownloadQueue";
 import { FileContextMenu } from "@/src/components/apps/files/FileContextMenu";
@@ -43,6 +45,29 @@ import { FileGrid } from "@/src/components/apps/files/FileGrid";
 import { FileList } from "@/src/components/apps/files/FileList";
 import { FileToolbar, toolbarClass, type FilesView } from "@/src/components/apps/files/FileToolbar";
 import { FilesSidebar } from "@/src/components/apps/files/FilesSidebar";
+import { SERVER_DROP_EVENT } from "@/src/components/apps/files/use-file-move-drag";
+import { ServerIcon } from "@/src/components/servers/ServerIcon";
+import {
+  copyPreviewFile,
+  createPreviewDirectory,
+  createPreviewFile,
+  deletePreviewFile,
+  listPreviewFiles,
+  movePreviewFile,
+  renamePreviewFile,
+  transferPreviewFile,
+  uploadPreviewFile,
+} from "@/src/lib/preview-files";
+import { isSampleServer } from "@/src/lib/sample-servers";
+
+function browseFiles(id: string, path: string) {
+  return isSampleServer(id) ? Promise.resolve(listPreviewFiles(id, path)) : listFiles(id, path);
+}
+
+function isEditable(entry: FileEntry) {
+  const kind = getFileViewer({ name: entry.name, mime: entry.mime });
+  return entry.type === "file" && (kind === "text" || kind === "code");
+}
 
 type Dialog =
   | { type: "file"; value: string }
@@ -83,7 +108,7 @@ type PendingMove = {
   destNames: string[];
 };
 
-type Clipboard = { mode: "copy" | "cut"; items: FileEntry[] };
+type Clipboard = { mode: "copy" | "cut"; serverId: string; items: FileEntry[] };
 
 type PendingPaste = { items: FileEntry[]; conflicts: FileEntry[] };
 
@@ -103,8 +128,19 @@ function withArchiveExt(name: string, format: ArchiveFormat) {
 
 export function FilesApp({ payload }: { payload?: WindowPayload }) {
   const { openWindow } = useWindowManager();
-  const { server } = useServer();
-  const selectedServer = useSelectedServer();
+  const server = useOptionalServer()?.server ?? null;
+  const boundServer = useSelectedServer();
+  const { servers } = useSession();
+  const connectedServers = servers.filter((item) => item.connected === true);
+  const sidebarServers =
+    connectedServers.length > 0
+      ? connectedServers
+      : boundServer && boundServer.connected !== false && !isSampleServer(boundServer.id)
+        ? [boundServer]
+        : [];
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const startPath = useRef<string | null>(null);
+  const folderByServer = useRef<Record<string, string>>({});
   const [path, setPath] = useState("/");
   const [history, setHistory] = useState<string[]>(["/"]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -115,6 +151,9 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  // Bumped on every open so the name input remounts and autoFocus runs again,
+  // even when a dialog is already showing (#12).
+  const [dialogKey, setDialogKey] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<FileEntry[] | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingProgress, setDeletingProgress] = useState<{
@@ -142,7 +181,15 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
   // The folder on screen, read when a background extraction finishes.
   const pathRef = useRef(path);
   const compressInputRef = useRef<HTMLInputElement>(null);
+  const selectedServer =
+    sidebarServers.find((item) => item.id === (pickedId || boundServer?.id)) ||
+    sidebarServers[0] ||
+    null;
   const serverId = selectedServer?.id || "";
+  function bound(extra: WindowPayload = {}): WindowPayload {
+    if (!serverId) return extra;
+    return { ...extra, serverId, serverName: selectedServer?.name };
+  }
   const downloads = useDownloadQueue(serverId);
   // The server resolves "~" to the user's real home (e.g. /root for root);
   // remember it so the sidebar can highlight Home.
@@ -153,7 +200,7 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
     setLoading(true);
     setError(null);
     try {
-      const result = await listFiles(serverId, nextPath);
+      const result = await browseFiles(serverId, nextPath);
       if (nextPath === HOME_PATH) setHomeDir(result.path);
       const sorted = [...result.entries].sort((a, b) => {
         if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
@@ -174,10 +221,11 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
   }, [path]);
 
   useEffect(() => {
-    if (!serverId) return;
+    if (!serverId || selectedServer?.connected === false) return;
     let cancelled = false;
-    const start = payload?.cwd || "/";
-    listFiles(serverId, start)
+    const start = startPath.current || payload?.cwd || "/";
+    startPath.current = null;
+    browseFiles(serverId, start)
       .then((result) => {
         if (cancelled) return;
         const sorted = [...result.entries].sort((a, b) => {
@@ -185,6 +233,7 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
           return a.name.localeCompare(b.name);
         });
         const resolved = result.path || start;
+        folderByServer.current[serverId] = resolved;
         setEntries(sorted);
         setPath(resolved);
         setHistory([resolved]);
@@ -203,7 +252,17 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
       cancelled = true;
     };
     // payload identity changes on each openWindow("files", ...), so a shortcut re-navigates an open window.
-  }, [serverId, payload]);
+  }, [serverId, payload, selectedServer?.connected]);
+
+  function selectServer(id: string) {
+    if (!id || id === serverId) return;
+    folderByServer.current[serverId] = path;
+    startPath.current = folderByServer.current[id] || HOME_PATH;
+    setHomeDir(null);
+    setPickedId(id);
+    clearSelection();
+    setQuery("");
+  }
 
   function goTo(next: string) {
     const normalized = next.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
@@ -244,13 +303,16 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
       goTo(entry.path);
       return;
     }
-    openWindow("viewer", {
-      filePath: entry.path,
-      fileName: entry.name,
-      fileSize: entry.size,
-      modified: entry.modified,
-      mime: entry.mime,
-    });
+    openWindow(
+      "viewer",
+      bound({
+        filePath: entry.path,
+        fileName: entry.name,
+        fileSize: entry.size,
+        modified: entry.modified,
+        mime: entry.mime,
+      }),
+    );
   }
 
   const selectedEntries = useMemo(() => {
@@ -354,11 +416,15 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
     }
     try {
       if (dialog.type === "file") {
-        await createFile(serverId, joinPath(path, name));
+        if (isSampleServer(serverId)) createPreviewFile(serverId, joinPath(path, name));
+        else await createFile(serverId, joinPath(path, name));
       } else if (dialog.type === "dir") {
-        await createDirectory(serverId, joinPath(path, name));
+        if (isSampleServer(serverId)) createPreviewDirectory(serverId, joinPath(path, name));
+        else await createDirectory(serverId, joinPath(path, name));
       } else if (dialog.type === "rename") {
-        await renameFile(serverId, dialog.from, joinPath(parentPath(dialog.from), name));
+        const to = joinPath(parentPath(dialog.from), name);
+        if (isSampleServer(serverId)) renamePreviewFile(serverId, dialog.from, to);
+        else await renameFile(serverId, dialog.from, to);
       }
       setDialog(null);
       await load(path);
@@ -378,7 +444,8 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
       const item = items[i];
       setDeletingProgress({ current: i + 1, total: items.length, name: item.name });
       try {
-        await deleteFile(serverId, item.path);
+        if (isSampleServer(serverId)) deletePreviewFile(serverId, item.path);
+        else await deleteFile(serverId, item.path);
         successfulPaths.add(item.path);
       } catch (err) {
         const msg = err instanceof ApiError ? err.message : "operation failed";
@@ -427,28 +494,31 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
 
   function copyToClipboard(mode: Clipboard["mode"], items: FileEntry[]) {
     if (items.length === 0) return;
-    setClipboard({ mode, items });
+    setClipboard({ mode, serverId, items });
     const what = items.length === 1 ? `“${items[0].name}”` : `${items.length} items`;
     setNotice({
       type: "info",
-      message: `${mode === "copy" ? "Copied" : "Cut"} ${what}. Open the destination folder and choose Paste.`,
+      message: `${mode === "copy" ? "Copied" : "Cut"} ${what}. Paste here, or switch to another connected server and paste.`,
     });
   }
 
   function paste() {
     if (!clipboard) return;
     const { mode } = clipboard;
+    const sameServer = clipboard.serverId === serverId;
     // Cutting into the folder the items already live in is a no-op.
     const items = clipboard.items.filter(
-      (item) => !(mode === "cut" && parentPath(item.path) === path),
+      (item) => !(sameServer && mode === "cut" && parentPath(item.path) === path),
     );
     if (items.length === 0) {
       setNotice({ type: "info", message: "The items are already in this folder." });
       return;
     }
-    const nested = items.find(
-      (item) => item.type === "dir" && (path === item.path || path.startsWith(`${item.path}/`)),
-    );
+    const nested = sameServer
+      ? items.find(
+          (item) => item.type === "dir" && (path === item.path || path.startsWith(`${item.path}/`)),
+        )
+      : undefined;
     if (nested) {
       setError(`cannot paste “${nested.name}” into itself`);
       return;
@@ -456,7 +526,7 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
     const names = entries.map((e) => e.name);
     // A copy into its own folder is a duplicate, never a conflict: it always keeps both.
     const conflicts = items.filter(
-      (item) => names.includes(item.name) && parentPath(item.path) !== path,
+      (item) => names.includes(item.name) && (!sameServer || parentPath(item.path) !== path),
     );
     if (conflicts.length > 0) {
       setPendingPaste({ items, conflicts });
@@ -468,8 +538,15 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
   async function runPaste(items: FileEntry[], resolution: "replace" | "keep") {
     if (!clipboard) return;
     const { mode } = clipboard;
+    const sameServer = clipboard.serverId === serverId;
     const op = mode === "copy" ? copyItem : moveItem;
-    const verb = mode === "copy" ? "Copying" : "Moving";
+    const verb = sameServer
+      ? mode === "copy"
+        ? "Copying"
+        : "Moving"
+      : mode === "copy"
+        ? "Copying to this server"
+        : "Moving to this server";
     const taken = entries.map((e) => e.name);
     const failed: FileEntry[] = [];
     const errors: string[] = [];
@@ -481,7 +558,8 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
       let name = item.name;
       let overwrite = false;
       if (taken.includes(name)) {
-        if (resolution === "replace" && parentPath(item.path) !== path) overwrite = true;
+        if (resolution === "replace" && (!sameServer || parentPath(item.path) !== path))
+          overwrite = true;
         else name = suggestUniqueName(taken, name);
       }
       taken.push(name);
@@ -490,7 +568,33 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
         message: `${verb} ${items.length > 1 ? `${i + 1} of ${items.length}: ` : ""}“${item.name}”…`,
       });
       try {
-        await op(serverId, item.path, joinPath(path, name), overwrite);
+        if (sameServer && isSampleServer(serverId)) {
+          const to = joinPath(path, name);
+          if (mode === "copy") copyPreviewFile(serverId, item.path, to, overwrite);
+          else movePreviewFile(serverId, item.path, to, overwrite);
+        } else if (sameServer) {
+          await op(serverId, item.path, joinPath(path, name), overwrite);
+        } else if (isSampleServer(clipboard.serverId) && isSampleServer(serverId)) {
+          transferPreviewFile(
+            clipboard.serverId,
+            serverId,
+            item.path,
+            path,
+            overwrite,
+            mode === "cut",
+            name === item.name ? "" : name,
+          );
+        } else {
+          await transferItem(
+            clipboard.serverId,
+            serverId,
+            item.path,
+            path,
+            overwrite,
+            mode === "cut",
+            name === item.name ? "" : name,
+          );
+        }
       } catch (err) {
         failed.push(item);
         errors.push(`“${item.name}”: ${errorMessage(err, "operation failed")}`);
@@ -498,7 +602,10 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
     }
 
     // A cut stays on the clipboard only for the items that failed to move.
-    if (mode === "cut") setClipboard(failed.length > 0 ? { mode, items: failed } : null);
+    if (mode === "cut")
+      setClipboard(
+        failed.length > 0 ? { mode, serverId: clipboard.serverId, items: failed } : null,
+      );
     const done = items.length - failed.length;
     if (errors.length > 0) {
       setNotice(null);
@@ -626,7 +733,8 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
     const file = fileList?.[0];
     if (!file) return;
     try {
-      await uploadFile(serverId, path, file);
+      if (isSampleServer(serverId)) uploadPreviewFile(serverId, path, file.name, file.size);
+      else await uploadFile(serverId, path, file);
       await load(path);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "upload failed");
@@ -645,7 +753,8 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
     if (sourcePath === to) return;
     try {
       setError(null);
-      const destEntries = destDir === path ? entries : (await listFiles(serverId, destDir)).entries;
+      const destEntries =
+        destDir === path ? entries : (await browseFiles(serverId, destDir)).entries;
       if (destEntries.some((entry) => entry.name === name && entry.path !== sourcePath)) {
         setPendingMove({
           from: sourcePath,
@@ -656,7 +765,8 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
         });
         return;
       }
-      await renameFile(serverId, sourcePath, to);
+      if (isSampleServer(serverId)) renamePreviewFile(serverId, sourcePath, to);
+      else await renameFile(serverId, sourcePath, to);
       clearSelection();
       await load(path);
     } catch (err) {
@@ -676,7 +786,10 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
               suggestUniqueName(pendingMove.destNames, pendingMove.name),
             );
       // SFTP rename refuses an existing target, so Replace goes through the server-side move.
-      if (mode === "replace") await moveItem(serverId, pendingMove.from, to, true);
+      if (isSampleServer(serverId)) {
+        if (mode === "replace") movePreviewFile(serverId, pendingMove.from, to, true);
+        else renamePreviewFile(serverId, pendingMove.from, to);
+      } else if (mode === "replace") await moveItem(serverId, pendingMove.from, to, true);
       else await renameFile(serverId, pendingMove.from, to);
       setPendingMove(null);
       clearSelection();
@@ -729,27 +842,35 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
     }
   }
 
-  const newFolder = () => setDialog({ type: "dir", value: "" });
-  const newFile = () => setDialog({ type: "file", value: "" });
+  function openDialog(next: Dialog) {
+    setDialog(next);
+    setDialogKey((key) => key + 1);
+  }
+
+  const newFolder = () => openDialog({ type: "dir", value: "" });
+  const newFile = () => openDialog({ type: "file", value: "" });
   const pickUpload = () => uploadRef.current?.click();
 
   function openInfo(entry: FileEntry | null) {
     const target = entry;
     if (!target) return;
-    openWindow("viewer", {
-      filePath: target.path,
-      fileName: target.name,
-      fileSize: target.size,
-      modified: target.modified,
-      mime: target.mime,
-      isDirectory: target.type === "dir",
-      infoOnly: true,
-    });
+    openWindow(
+      "viewer",
+      bound({
+        filePath: target.path,
+        fileName: target.name,
+        fileSize: target.size,
+        modified: target.modified,
+        mime: target.mime,
+        isDirectory: target.type === "dir",
+        infoOnly: true,
+      }),
+    );
   }
 
   function openTerminalHere(entry: FileEntry | null) {
     const cwd = entry?.type === "dir" ? entry.path : path;
-    openWindow("terminal", { cwd });
+    openWindow("terminal", bound({ cwd }));
   }
 
   const viewProps = {
@@ -768,6 +889,91 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
   };
   const serverName = selectedServer?.name || server?.hostname || "Server";
   const title = path === "/" ? serverName : baseName(path);
+  const dropState = useRef({ serverId, entries, selectedPaths });
+  dropState.current = { serverId, entries, selectedPaths };
+  const copyOntoRef = useRef<(fromId: string, toId: string, items: FileEntry[]) => Promise<void>>(
+    async () => {},
+  );
+
+  useEffect(() => {
+    function onServerDrop(event: Event) {
+      const detail = (
+        event as CustomEvent<{ source?: string; type?: "file" | "dir"; serverId?: string }>
+      ).detail;
+      const toId = detail?.serverId;
+      const source = detail?.source;
+      if (!toId || !source || toId === dropState.current.serverId) return;
+      const chosen = dropState.current.entries.filter((entry) =>
+        dropState.current.selectedPaths.has(entry.path),
+      );
+      const items = chosen.some((entry) => entry.path === source)
+        ? chosen
+        : dropState.current.entries.filter((entry) => entry.path === source);
+      const payloadItems =
+        items.length > 0
+          ? items
+          : [
+              {
+                name: baseName(source),
+                path: source,
+                type: detail.type || "file",
+                size: 0,
+                mode: "",
+                modified: "",
+              },
+            ];
+      void copyOntoRef.current(dropState.current.serverId, toId, payloadItems);
+    }
+    window.addEventListener(SERVER_DROP_EVENT, onServerDrop);
+    return () => window.removeEventListener(SERVER_DROP_EVENT, onServerDrop);
+  }, []);
+
+  async function copyOntoServer(fromId: string, toId: string, items: FileEntry[]) {
+    const label = sidebarServers.find((item) => item.id === toId)?.name || "that server";
+    const failed: string[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      setNotice({
+        type: "info",
+        message: `Copying ${items.length > 1 ? `${i + 1} of ${items.length}: ` : ""}“${item.name}” to ${label}…`,
+      });
+      try {
+        if (isSampleServer(fromId) && isSampleServer(toId)) {
+          transferPreviewFile(fromId, toId, item.path, "", false, false);
+        } else await transferItem(fromId, toId, item.path, "", false, false);
+      } catch (err) {
+        failed.push(`“${item.name}”: ${errorMessage(err, "copy failed")}`);
+      }
+    }
+    if (failed.length > 0) {
+      setNotice(null);
+      setError(failed.join(", "));
+      return;
+    }
+    setNotice({
+      type: "success",
+      message: `Copied ${items.length} ${items.length === 1 ? "item" : "items"} to ${label}. Open that server to see them in its home folder.`,
+    });
+  }
+  copyOntoRef.current = copyOntoServer;
+
+  if (!serverId) {
+    return (
+      <div className="sui-finder flex h-full min-h-0 overflow-hidden">
+        <FilesSidebar
+          path="/"
+          homePath={HOME_PATH}
+          servers={sidebarServers}
+          activeId=""
+          onSelectServer={selectServer}
+          onNavigate={() => {}}
+        />
+        <div className="flex flex-1 items-center justify-center p-8 text-center text-[13px] leading-5 text-white/60">
+          Connect a server to browse its files.
+        </div>
+      </div>
+    );
+  }
   const statusText =
     selectedEntries.length > 0
       ? `${selectedEntries.length} of ${visible.length} selected${
@@ -815,12 +1021,25 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
       <FilesSidebar
         path={path}
         homePath={homeDir ?? HOME_PATH}
-        serverName={serverName}
+        servers={sidebarServers}
+        activeId={serverId}
+        onSelectServer={selectServer}
         onNavigate={goTo}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--finder-content)]">
         <FileToolbar
           title={title}
+          icon={
+            selectedServer ? (
+              <ServerIcon
+                iconId={selectedServer.iconId}
+                customIcon={selectedServer.customIcon}
+                serverId={selectedServer.id}
+                updatedAt={selectedServer.updatedAt}
+                size={16}
+              />
+            ) : null
+          }
           canGoBack={historyIndex > 0}
           canGoForward={historyIndex < history.length - 1}
           onBack={back}
@@ -837,7 +1056,7 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
           onDownload={() => onDownloadSelected(selectedEntries)}
           onRename={() =>
             singleSelectedEntry &&
-            setDialog({
+            openDialog({
               type: "rename",
               value: singleSelectedEntry.name,
               from: singleSelectedEntry.path,
@@ -892,10 +1111,17 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
           >
             <label className="sui-finder-muted">{DIALOG_TEXT[dialog.type].label}</label>
             <input
+              key={dialogKey}
               autoFocus
               className="sui-input min-w-0 flex-1 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-sky-400"
               value={dialog.value}
               onChange={(event) => setDialog({ ...dialog, value: event.target.value })}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setDialog(null);
+                }
+              }}
             />
             <button type="submit" className={toolbarClass}>
               {DIALOG_TEXT[dialog.type].submit}
@@ -1253,7 +1479,7 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
           onTerminalHere={() => openTerminalHere(menu.entry)}
           onRename={() =>
             menu.entry &&
-            setDialog({ type: "rename", value: menu.entry.name, from: menu.entry.path })
+            openDialog({ type: "rename", value: menu.entry.name, from: menu.entry.path })
           }
           onCopy={() => copyToClipboard("copy", menuTargets(menu.entry))}
           onCut={() => copyToClipboard("cut", menuTargets(menu.entry))}
@@ -1262,12 +1488,24 @@ export function FilesApp({ payload }: { payload?: WindowPayload }) {
           onNewFile={newFile}
           onUpload={pickUpload}
           canPaste={Boolean(clipboard)}
-          onAddToDesktop={() => addDesktopShortcut(serverId, menu.entry?.path || path)}
+          onEdit={
+            menu.entry && isEditable(menu.entry)
+              ? () =>
+                  menu.entry &&
+                  openWindow(
+                    "editor",
+                    bound({ filePath: menu.entry.path, fileName: menu.entry.name }),
+                  )
+              : undefined
+          }
+          onAddToDesktop={() =>
+            addDesktopShortcut(serverId, menu.entry?.path || path, selectedServer?.name)
+          }
           onCompress={() => openCompress(menuTargets(menu.entry))}
           onExtractHere={() => menu.entry && void onExtract(menu.entry, "here")}
           onExtractTo={() =>
             menu.entry &&
-            setDialog({
+            openDialog({
               type: "extract",
               value: joinPath(path, archiveStem(menu.entry.name)),
               archive: menu.entry,

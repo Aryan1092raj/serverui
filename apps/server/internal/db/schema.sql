@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS servers (
     status TEXT NOT NULL DEFAULT 'unknown',
     last_error TEXT NOT NULL DEFAULT '',
     last_seen TIMESTAMPTZ,
+    logo TEXT NOT NULL DEFAULT '',
+    icon_id TEXT NOT NULL DEFAULT 'server',
+    custom_icon TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

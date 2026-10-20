@@ -56,7 +56,12 @@ export function DesktopShortcuts({ serverId }: { serverId: string }) {
   const cells = layoutShortcuts(shortcuts, cols, rows);
 
   function open(path: string) {
-    openWindow("files", { cwd: path });
+    const shortcut = shortcuts.find((item) => item.path === path);
+    openWindow("files", {
+      cwd: path,
+      serverId: shortcut?.serverId,
+      serverName: shortcut?.serverName,
+    });
   }
 
   function onContextMenu(event: MouseEvent, path: string) {

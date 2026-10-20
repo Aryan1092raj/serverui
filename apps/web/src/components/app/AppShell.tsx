@@ -1,17 +1,16 @@
 "use client";
 
-import { BootScreen } from "@/src/components/boot/BootScreen";
-import { LogoutScreen } from "@/src/components/boot/LogoutScreen";
 import { Desktop } from "@/src/components/desktop/Desktop";
-import { ServerSelection } from "@/src/components/server-selection/ServerSelection";
+import { AppearanceEffects } from "@/src/lib/appearance";
 import { RuntimeProvider } from "@/src/lib/runtime";
-import { SessionProvider, useSession } from "@/src/lib/session";
+import { SessionProvider } from "@/src/lib/session";
 import { ThemeProvider } from "@/src/lib/theme";
 import { WallpaperProvider } from "@/src/lib/wallpaper";
 
 export function AppShell() {
   return (
     <ThemeProvider>
+      <AppearanceEffects />
       <WallpaperProvider>
         <RuntimeProvider>
           <SessionProvider>
@@ -24,23 +23,9 @@ export function AppShell() {
 }
 
 function AppScreens() {
-  const { screen, selectedServer, completeBoot, completeLogOut } = useSession();
-
-  if (screen === "booting" && selectedServer) {
-    return <BootScreen server={selectedServer} onComplete={completeBoot} />;
-  }
-
-  if (screen === "logging-off" && selectedServer) {
-    return <LogoutScreen server={selectedServer} onComplete={completeLogOut} />;
-  }
-
-  if (screen === "desktop" && selectedServer) {
-    return (
-      <div className="h-dvh w-full animate-desktop-in">
-        <Desktop key={selectedServer.id} />
-      </div>
-    );
-  }
-
-  return <ServerSelection />;
+  return (
+    <div className="h-dvh w-full">
+      <Desktop />
+    </div>
+  );
 }
