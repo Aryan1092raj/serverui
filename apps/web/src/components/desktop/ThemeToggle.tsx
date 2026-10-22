@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme, type Theme } from "@/src/lib/theme";
 
 export type ThemeToggleVariant = "compact" | "full";
@@ -9,8 +9,6 @@ export type ThemeToggleVariant = "compact" | "full";
 interface ThemeToggleProps {
   /** Variant: "compact" for top bar (icon only), "full" for settings panel (icon + label) */
   variant?: ThemeToggleVariant;
-  /** Optional custom tooltip message */
-  tooltip?: string;
 }
 
 /**
@@ -19,20 +17,17 @@ interface ThemeToggleProps {
  * Features:
  * - 3 states: Light (Sun), Dark (Moon), System (Monitor)
  * - Keyboard accessible: Arrow keys to navigate, Enter/Space to select, Escape to close
- * - ARIA radiogroup pattern for accessibility
+ * - ARIA menu with menuitemradio options
  * - Focus-visible styles for keyboard navigation
- * - Tooltip on hover showing current theme
  * - Smooth 150ms transition on theme change
- * - Two variants: compact (icon only) for top bar, full (icon + label) for settings
+ * - Two variants: compact (icon trigger) for top bar, full (icon + label trigger) for settings
  */
-export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) {
+export function ThemeToggle({ variant = "compact" }: ThemeToggleProps) {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([null, null, null]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const [showTooltip, setShowTooltip] = useState(false);
 
   const themes: Array<{ value: Theme; icon: React.ReactNode; label: string; ariaLabel: string }> = [
     {
@@ -90,10 +85,10 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
     }
   };
 
-  // Focus the active button when focusIndex changes
+  // Focus the active option when the menu opens or the focus index changes
   useEffect(() => {
-    buttonRefs.current[focusedIndex]?.focus();
-  }, [focusedIndex]);
+    if (isOpen) buttonRefs.current[focusedIndex]?.focus();
+  }, [isOpen, focusedIndex]);
 
   // Close on outside click
   useEffect(() => {
@@ -109,35 +104,8 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
     return () => document.removeEventListener("pointerdown", handleClickOutside);
   }, [isOpen, theme]);
 
-  // Handle tooltip visibility
-  useEffect(() => {
-    const tooltipEl = tooltipRef.current;
-    if (!tooltipEl) return;
-
-    const handleMouseEnter = () => setShowTooltip(true);
-    const handleMouseLeave = () => setShowTooltip(false);
-
-    tooltipEl.addEventListener("mouseenter", handleMouseEnter);
-    tooltipEl.addEventListener("mouseleave", handleMouseLeave);
-
-    return () => {
-      tooltipEl.removeEventListener("mouseenter", handleMouseEnter);
-      tooltipEl.removeEventListener("mouseleave", handleMouseLeave);
-    };
-  }, []);
-
   const currentTheme = themes.find((t) => t.value === theme);
   const resolvedThemeInfo = themes.find((t) => t.value === resolvedTheme);
-
-  // Tooltip content: shows current theme and resolved theme if different
-  const tooltipContent = tooltip || (
-    <>
-      <span className="font-medium">{currentTheme?.label}</span>
-      {theme === "system" && (
-        <span className="text-[11px] opacity-70 ml-1">({resolvedThemeInfo?.label})</span>
-      )}
-    </>
-  );
 
   const compactClasses = `
     relative flex items-center justify-center
@@ -174,70 +142,25 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
       : "text-[var(--app-muted)] hover:text-[var(--app-fg)]";
 
   const optionButtonClasses =
-    variant === "compact"
-      ? "flex size-8 items-center justify-center rounded-full outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--topbar-fg)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--topbar-bg)]"
-      : "flex w-full items-center gap-3 px-3 py-2 rounded-lg outline-none transition-all duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--app-border)] focus-visible:ring-offset-1";
+    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[var(--app-selected)]";
 
-  const optionActiveClasses =
-    variant === "compact"
-      ? "bg-[var(--toggle-active)] text-[var(--toggle-active-fg)] shadow-sm"
-      : "bg-[var(--app-selected)] text-[var(--finder-accent)]";
+  const optionActiveClasses = "bg-[var(--app-selected)] text-[var(--menu-fg)]";
 
   const optionInactiveClasses =
-    variant === "compact"
-      ? "text-[var(--topbar-muted)] hover:text-[var(--topbar-fg)] hover:bg-[var(--topbar-bg)]"
-      : "text-[var(--app-muted)] hover:text-[var(--app-fg)] hover:bg-[var(--app-hover)]";
+    "text-[var(--menu-fg)] opacity-80 hover:bg-[var(--app-hover)] hover:opacity-100";
 
   return (
-    <div
-      ref={containerRef}
-      className="relative inline-flex"
-      role="radiogroup"
-      aria-label="Appearance"
-      onKeyDown={handleKeyDown}
-    >
-      {/* Tooltip */}
-      <div
-        ref={tooltipRef}
-        className={`
-          absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-          px-3 py-1.5
-          rounded-md
-          text-[11px] font-medium text-white
-          whitespace-nowrap
-          opacity-0 pointer-events-none
-          transition-opacity duration-150 ease-out
-          z-[100]
-          ${
-            variant === "compact"
-              ? "bg-gray-900/95 border border-white/10 shadow-lg backdrop-blur-sm"
-              : "bg-gray-800/95 border border-white/10 shadow-lg backdrop-blur-sm"
-          }
-          ${showTooltip ? "opacity-100" : "opacity-0"}
-        `}
-        style={{ transform: "translateX(-50%) translateY(-4px)" }}
-        role="tooltip"
-        aria-hidden={!showTooltip}
-      >
-        {tooltipContent}
-        <div
-          className="absolute top-full left-1/2 -translate-x-1/2 size-2 rotate-45"
-          style={{
-            background: variant === "compact" ? "rgba(17, 24, 39, 0.95)" : "rgba(31, 41, 55, 0.95)",
-            borderRight: "1px solid rgba(255, 255, 255, 0.1)",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-          }}
-          aria-hidden
-        />
-      </div>
-
+    <div ref={containerRef} className="relative inline-flex" onKeyDown={handleKeyDown}>
       {/* Main toggle button (compact) or selected display (full) */}
       {variant === "compact" ? (
         <button
           type="button"
           className={compactClasses}
-          onClick={() => setIsOpen((open) => !open)}
-          aria-haspopup="listbox"
+          onClick={() => {
+            setFocusedIndex(themes.findIndex((t) => t.value === theme));
+            setIsOpen((open) => !open);
+          }}
+          aria-haspopup="menu"
           aria-expanded={isOpen}
           aria-label={currentTheme?.ariaLabel}
           title={currentTheme?.label}
@@ -245,32 +168,32 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
           {currentTheme?.icon}
         </button>
       ) : (
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-[var(--app-card)] border border-[var(--app-border)]">
+        <button
+          type="button"
+          className="flex items-center gap-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2 text-[var(--app-fg)] outline-none transition-colors duration-150 ease-out hover:bg-[var(--app-hover)] focus-visible:ring-2 focus-visible:ring-[var(--app-selected)]"
+          onClick={() => {
+            setFocusedIndex(themes.findIndex((t) => t.value === theme));
+            setIsOpen((open) => !open);
+          }}
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+        >
           {currentTheme?.icon}
-          <span className="text-sm font-medium text-[var(--app-fg)]">{currentTheme?.label}</span>
+          <span className="text-sm font-medium">{currentTheme?.label}</span>
           {theme === "system" && (
-            <span className="text-xs text-[var(--app-muted)] ml-auto px-2 py-0.5 rounded-full bg-[var(--app-input)]">
+            <span className="ml-2 rounded-full bg-[var(--app-input)] px-2 py-0.5 text-xs text-[var(--app-muted)]">
               {resolvedThemeInfo?.label}
             </span>
           )}
-        </div>
+        </button>
       )}
 
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          role="listbox"
+          role="menu"
           aria-label="Select theme"
-          className={`
-            absolute right-0 top-full z-[100] mt-2 min-w-[140px]
-            rounded-xl border border-[var(--app-border)]
-            bg-[var(--menu-bg)] text-[var(--menu-fg)]
-            shadow-[0_18px_50px_rgba(0,0,0,0.45)]
-            backdrop-blur-xl
-            animate-menu-in
-            ${variant === "compact" ? "p-1.5" : "p-2"}
-          `}
-          style={{ minWidth: variant === "compact" ? "140px" : "200px" }}
+          className={`${variant === "compact" ? "right-0" : "left-0"} absolute top-full z-[100] mt-2 min-w-[160px] animate-menu-in rounded-xl border border-[var(--app-border)] bg-[var(--menu-bg)] p-1.5 text-[var(--menu-fg)] shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl`}
         >
           {themes.map((t, index) => (
             <button
@@ -279,22 +202,17 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
                 buttonRefs.current[index] = el;
               }}
               type="button"
-              role="option"
-              aria-selected={theme === t.value}
-              aria-label={t.ariaLabel}
-              className={`
-                ${optionButtonClasses}
-                ${theme === t.value ? optionActiveClasses : optionInactiveClasses}
-                ${index === focusedIndex ? "ring-2 ring-[var(--app-selected)]" : ""}
-              `}
+              role="menuitemradio"
+              aria-checked={theme === t.value}
+              className={`${optionButtonClasses} ${theme === t.value ? optionActiveClasses : optionInactiveClasses}`}
               onClick={() => {
                 setTheme(t.value);
                 setIsOpen(false);
               }}
               onKeyDown={(e) => {
-                // Prevent event bubbling to parent keydown handler
-                e.stopPropagation();
                 if (e.key === "Enter" || e.key === " ") {
+                  // Select here; keep the parent handler from selecting again
+                  e.stopPropagation();
                   e.preventDefault();
                   setTheme(t.value);
                   setIsOpen(false);
@@ -305,10 +223,8 @@ export function ThemeToggle({ variant = "compact", tooltip }: ThemeToggleProps) 
               <span className="flex size-5 shrink-0 items-center justify-center" aria-hidden>
                 {t.icon}
               </span>
-              {variant === "full" && <span className="text-sm font-medium">{t.label}</span>}
-              {theme === t.value && (
-                <span className={variant === "compact" ? "ml-auto" : "ml-auto"}>✓</span>
-              )}
+              <span className="font-medium">{t.label}</span>
+              {theme === t.value && <Check aria-hidden className="ml-auto size-3.5 shrink-0" />}
             </button>
           ))}
         </div>
